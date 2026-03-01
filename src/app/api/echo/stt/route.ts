@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { transcribeWithDeepgramFile, transcribeWithDeepgramUrl } from '@/lib/services/deepgram';
 import { logApiUsage, requireApiPrincipal } from '@/lib/api-key-auth';
 
+// Override default body size limit for file uploads (max 15MB)
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   const startedAtMs = Date.now();
   const auth = await requireApiPrincipal(req);
