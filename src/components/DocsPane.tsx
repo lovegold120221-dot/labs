@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Phone,
   Copy,
@@ -250,8 +250,6 @@ export default function DocsPane({
   const [selectedId, setSelectedId] = useState<string>("tts");
   const [codeTab, setCodeTab] = useState<Record<string, "curl" | "js" | "py">>({});
 
-  const selected = ENDPOINTS.find((e) => e.id === selectedId) ?? ENDPOINTS[0];
-  const currentCodeTab = (codeTab[selected.id] ?? "curl") as "curl" | "js" | "py";
   const normalizedInboundCallNumber = INBOUND_CALL_NUMBER.replace(/[^\d+]/g, "");
 
   const copyToClipboard = async (text: string) => {
@@ -262,6 +260,47 @@ export default function DocsPane({
       onCopyFeedback("Copy failed");
     }
   };
+
+  const scrollToEndpoint = (id: string) => {
+    setSelectedId(id);
+    const element = document.getElementById(`endpoint-${id}`);
+    if (element) {
+      // Adding a small timeout to allow UI layout update if necessary
+      setTimeout(() => {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    }
+  };
+
+  useEffect(() => {
+    if (docTab !== "api-reference") return;
+
+    const observerOptions = {
+      root: document.querySelector('.docs-api-main'),
+      rootMargin: "0px 0px -60% 0px", // triggers when element crosses top 40% of viewport
+      threshold: 0,
+    };
+
+    const observerCallback: IntersectionObserverCallback = (entries) => {
+      // Find all intersecting entries
+      const visibleEntries = entries.filter(e => e.isIntersecting);
+      if (visibleEntries.length > 0) {
+        // If multiple are visible, pick the top one (first in DOM)
+        // Entries usually come ordered, but we can rely on traversing or just picking the first intersecting id
+        const targetId = visibleEntries[0].target.id.replace('endpoint-', '');
+        setSelectedId(targetId);
+      }
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    ENDPOINTS.forEach((ep) => {
+      const el = document.getElementById(`endpoint-${ep.id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [docTab]);
 
   return (
     <div className="docs-v2">
@@ -486,7 +525,7 @@ export default function DocsPane({
                     key={ep.id}
                     type="button"
                     className={`docs-sidebar-item ${selectedId === ep.id ? "active" : ""}`}
-                    onClick={() => setSelectedId(ep.id)}
+                    onClick={() => scrollToEndpoint(ep.id)}
                   >
                     <span className={`docs-method-badge docs-method-${ep.method.toLowerCase()}`}>{ep.method}</span>
                     <span className="docs-sidebar-label">{ep.title}</span>
@@ -497,151 +536,160 @@ export default function DocsPane({
           </aside>
 
           {/* Main content */}
-          <main className="docs-api-main">
-            <section className="docs-endpoint-header docs-panel">
-              <div className="docs-endpoint-title-row">
-                <h1 className="docs-endpoint-title">{selected.title}</h1>
-                <span className={`docs-method-badge docs-method-${selected.method.toLowerCase()}`}>{selected.method}</span>
-              </div>
-              <p className="docs-endpoint-summary">{selected.desc}</p>
-              <div className="docs-endpoint-meta">
-                <span className="docs-endpoint-chip">{selected.category}</span>
-                <code className="docs-endpoint-url">{apiBaseUrl}{selected.path}</code>
-                <button
-                  type="button"
-                  className="docs-endpoint-copy"
-                  onClick={() => copyToClipboard(`${apiBaseUrl}${selected.path}`)}
-                  title="Copy endpoint URL"
-                >
-                  <Copy size={16} strokeWidth={2.25} />
-                </button>
-              </div>
-            </section>
-
-            <section className="docs-api-section docs-panel">
-              <h3 className="docs-api-section-title">Authentication</h3>
-              <p className="docs-api-section-desc">
-                Include your API key using either <code className="docs-code-inline">Authorization: Bearer ...</code> or <code className="docs-code-inline">x-api-key</code>.
-                Generate keys in the Docs <code className="docs-code-inline">API Access</code> panel (or <code className="docs-code-inline">Settings → API Keys</code>).
-              </p>
-              <div className="docs-auth-example">
-                <code>Authorization: Bearer YOUR_API_KEY</code>
-                <br />
-                <code>x-api-key: YOUR_API_KEY</code>
-              </div>
-              {isAuthenticated && onCreateApiKey && onApiKeyNameChange ? (
-                <div className="docs-auth-create">
-                  <div className="api-keys-create-row docs-auth-create-row">
-                    <input
-                      type="text"
-                      value={apiKeyName}
-                      onChange={(e) => onApiKeyNameChange(e.target.value)}
-                      placeholder="Key name (e.g., Production app)"
-                      title="API key name"
-                    />
-                    <button
-                      type="button"
-                      className="btn primary"
-                      onClick={onCreateApiKey}
-                      disabled={isApiKeysLoading}
-                    >
-                      Create Key
-                    </button>
-                    {onRefreshApiKeys && (
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={onRefreshApiKeys}
-                        disabled={isApiKeysLoading}
-                      >
-                        Refresh
-                      </button>
-                    )}
-                  </div>
-                  {newlyCreatedApiKey && (
-                    <div className="api-key-secret">
-                      <code>{newlyCreatedApiKey}</code>
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={onCopyNewApiKey}
-                      >
-                        Copy
-                      </button>
-                    </div>
-                  )}
-                  {apiKeysStatus && <div className="settings-note docs-auth-status">{apiKeysStatus}</div>}
+          <main className="docs-api-main docs-scroll-smooth">
+            <div className="docs-api-scroll-padding">
+            {ENDPOINTS.map((selected) => {
+              const currentCodeTab = (codeTab[selected.id] ?? "curl") as "curl" | "js" | "py";
+              return (
+              <div key={selected.id} id={`endpoint-${selected.id}`} className="docs-endpoint-section">
+              <section className="docs-endpoint-header docs-panel">
+                <div className="docs-endpoint-title-row">
+                  <h1 className="docs-endpoint-title">{selected.title}</h1>
+                  <span className={`docs-method-badge docs-method-${selected.method.toLowerCase()}`}>{selected.method}</span>
                 </div>
-              ) : (
-                <div className="settings-note docs-auth-status">
-                  Sign in to create API keys directly from Docs.
-                </div>
-              )}
-            </section>
-
-            <section className="docs-api-section docs-panel">
-              <h3 className="docs-api-section-title">Request</h3>
-              {selected.params && selected.params.length > 0 ? (
-                <div className="docs-params-table">
-                  <div className="docs-params-header">
-                    <span>Parameter</span>
-                    <span>Type</span>
-                    <span>Required</span>
-                  </div>
-                  {selected.params.map((p) => (
-                    <div key={p.name} className="docs-param-row">
-                      <code className="docs-param-name">{p.name}</code>
-                      <span className="docs-param-type">{p.type}</span>
-                      <span className={`docs-param-badge ${p.required ? "required" : "optional"}`}>
-                        {p.required ? "Required" : "Optional"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="docs-empty-note">
-                  No body parameters are required for this endpoint.
-                </p>
-              )}
-            </section>
-
-            <div className="docs-code-response-row">
-              <div className="docs-code-block">
-                <div className="docs-code-header">
-                  <span className="docs-code-method">{selected.method} {selected.path}</span>
-                  <div className="docs-code-actions">
-                    <select
-                      value={currentCodeTab}
-                      onChange={(e) => setCodeTab((p) => ({ ...p, [selected.id]: e.target.value as "curl" | "js" | "py" }))}
-                      className="docs-code-select"
-                      title="Code language"
-                      aria-label="Code language"
-                    >
-                      <option value="curl">cURL</option>
-                      <option value="js">JavaScript</option>
-                      <option value="py">Python</option>
-                    </select>
-                    <button type="button" className="docs-code-copy" onClick={() => copyToClipboard(selected.examples[currentCodeTab](apiBaseUrl))} title="Copy">
-                      <Copy size={16} strokeWidth={2.25} />
-                    </button>
-                  </div>
-                </div>
-                <pre className="docs-code-pre">{selected.examples[currentCodeTab](apiBaseUrl)}</pre>
-                <button type="button" className="docs-try-btn">
-                  <Play size={16} />
-                  Try it
-                </button>
-              </div>
-
-              <div className="docs-response-block">
-                <div className="docs-response-header">
-                  <span className="docs-response-status">{selected.responseStatus}</span>
-                  <button type="button" className="docs-code-copy" onClick={() => copyToClipboard(JSON.stringify(selected.responseExample, null, 2))} title="Copy">
+                <p className="docs-endpoint-summary">{selected.desc}</p>
+                <div className="docs-endpoint-meta">
+                  <span className="docs-endpoint-chip">{selected.category}</span>
+                  <code className="docs-endpoint-url">{apiBaseUrl}{selected.path}</code>
+                  <button
+                    type="button"
+                    className="docs-endpoint-copy"
+                    onClick={() => copyToClipboard(`${apiBaseUrl}${selected.path}`)}
+                    title="Copy endpoint URL"
+                  >
                     <Copy size={16} strokeWidth={2.25} />
                   </button>
                 </div>
-                <pre className="docs-response-pre">{JSON.stringify(selected.responseExample, null, 2)}</pre>
+              </section>
+
+              <section className="docs-api-section docs-panel">
+                <h3 className="docs-api-section-title">Authentication</h3>
+                <p className="docs-api-section-desc">
+                  Include your API key using either <code className="docs-code-inline">Authorization: Bearer ...</code> or <code className="docs-code-inline">x-api-key</code>.
+                  Generate keys in the Docs <code className="docs-code-inline">API Access</code> panel (or <code className="docs-code-inline">Settings → API Keys</code>).
+                </p>
+                <div className="docs-auth-example">
+                  <code>Authorization: Bearer YOUR_API_KEY</code>
+                  <br />
+                  <code>x-api-key: YOUR_API_KEY</code>
+                </div>
+                {isAuthenticated && onCreateApiKey && onApiKeyNameChange ? (
+                  <div className="docs-auth-create">
+                    <div className="api-keys-create-row docs-auth-create-row">
+                      <input
+                        type="text"
+                        value={apiKeyName}
+                        onChange={(e) => onApiKeyNameChange(e.target.value)}
+                        placeholder="Key name (e.g., Production app)"
+                        title="API key name"
+                      />
+                      <button
+                        type="button"
+                        className="btn primary"
+                        onClick={onCreateApiKey}
+                        disabled={isApiKeysLoading}
+                      >
+                        Create Key
+                      </button>
+                      {onRefreshApiKeys && (
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={onRefreshApiKeys}
+                          disabled={isApiKeysLoading}
+                        >
+                          Refresh
+                        </button>
+                      )}
+                    </div>
+                    {newlyCreatedApiKey && (
+                      <div className="api-key-secret">
+                        <code>{newlyCreatedApiKey}</code>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={onCopyNewApiKey}
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    )}
+                    {apiKeysStatus && <div className="settings-note docs-auth-status">{apiKeysStatus}</div>}
+                  </div>
+                ) : (
+                  <div className="settings-note docs-auth-status">
+                    Sign in to create API keys directly from Docs.
+                  </div>
+                )}
+              </section>
+
+              <section className="docs-api-section docs-panel">
+                <h3 className="docs-api-section-title">Request</h3>
+                {selected.params && selected.params.length > 0 ? (
+                  <div className="docs-params-table">
+                    <div className="docs-params-header">
+                      <span>Parameter</span>
+                      <span>Type</span>
+                      <span>Required</span>
+                    </div>
+                    {selected.params.map((p) => (
+                      <div key={p.name} className="docs-param-row">
+                        <code className="docs-param-name">{p.name}</code>
+                        <span className="docs-param-type">{p.type}</span>
+                        <span className={`docs-param-badge ${p.required ? "required" : "optional"}`}>
+                          {p.required ? "Required" : "Optional"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="docs-empty-note">
+                    No body parameters are required for this endpoint.
+                  </p>
+                )}
+              </section>
+
+              <div className="docs-code-response-row">
+                <div className="docs-code-block">
+                  <div className="docs-code-header">
+                    <span className="docs-code-method">{selected.method} {selected.path}</span>
+                    <div className="docs-code-actions">
+                      <select
+                        value={currentCodeTab}
+                        onChange={(e) => setCodeTab((p) => ({ ...p, [selected.id]: e.target.value as "curl" | "js" | "py" }))}
+                        className="docs-code-select"
+                        title="Code language"
+                        aria-label="Code language"
+                      >
+                        <option value="curl">cURL</option>
+                        <option value="js">JavaScript</option>
+                        <option value="py">Python</option>
+                      </select>
+                      <button type="button" className="docs-code-copy" onClick={() => copyToClipboard(selected.examples[currentCodeTab](apiBaseUrl))} title="Copy">
+                        <Copy size={16} strokeWidth={2.25} />
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="docs-code-pre">{selected.examples[currentCodeTab](apiBaseUrl)}</pre>
+                  <button type="button" className="docs-try-btn">
+                    <Play size={16} />
+                    Try it
+                  </button>
+                </div>
+
+                <div className="docs-response-block">
+                  <div className="docs-response-header">
+                    <span className="docs-response-status">{selected.responseStatus}</span>
+                    <button type="button" className="docs-code-copy" onClick={() => copyToClipboard(JSON.stringify(selected.responseExample, null, 2))} title="Copy">
+                      <Copy size={16} strokeWidth={2.25} />
+                    </button>
+                  </div>
+                  <pre className="docs-response-pre">{JSON.stringify(selected.responseExample, null, 2)}</pre>
+                </div>
               </div>
+              </div>
+              );
+            })}
             </div>
           </main>
           </div>
