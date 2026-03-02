@@ -3230,6 +3230,136 @@ body.light-mode .call-log-transcript-toolbar .btn {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
 }
 
+/* =====================================================
+   LIGHT-MODE: Audio Tab + Voice Library uniformity
+   All audio-sub-tab, vl-*, voice-card-* classes
+   ===================================================== */
+
+/* ── Audio sub-tabs (Voices / TTS / STT / History) ── */
+body.light-mode .audio-sub-tab {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #475569;                /* slate-600 — readable on white */
+}
+body.light-mode .audio-sub-tab:hover {
+  border-color: var(--lime);
+  color: var(--lime);            /* dark green on hover */
+  background: var(--limeDim);
+}
+body.light-mode .audio-sub-tab.active {
+  background: var(--limeDim);   /* #dcfce7 pale green */
+  border-color: var(--lime);
+  color: var(--lime);            /* dark green — sufficient contrast on pale green */
+}
+
+/* ── VL inner sub-tabs (Explore / My Voices / Default Voices) ── */
+body.light-mode .vl-tab {
+  color: #64748b;                /* slate-500 readable on white */
+}
+body.light-mode .vl-tab:hover {
+  color: #0f172a;
+}
+body.light-mode .vl-tab.active {
+  color: #0f172a;                /* near-black — over white */
+}
+body.light-mode .vl-tab.active::after {
+  background: #0f172a;          /* underline matches text */
+}
+
+/* ── Voice library search box ── */
+body.light-mode .vl-search {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+body.light-mode .vl-search:focus {
+  border-color: var(--lime);
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+}
+body.light-mode .vl-search-icon {
+  color: #64748b;
+}
+
+/* ── Filter chips ── */
+body.light-mode .vl-chip {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+body.light-mode .vl-chip:hover {
+  border-color: #94a3b8;        /* visible on white (replaces rgba-white) */
+  color: #0f172a;
+  background: #f8fafc;
+}
+body.light-mode .vl-chip.active {
+  background: #0f172a;         /* dark bg — white text */
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+/* ── VL tabs row border ── */
+body.light-mode .vl-tabs-row {
+  border-color: #e2e8f0;
+}
+
+/* ── VL section title / count ── */
+body.light-mode .vl-section-title {
+  color: #0f172a;
+}
+body.light-mode .vl-section-count {
+  color: #64748b;
+}
+
+/* ── Voice cards (vl-card & voice-card-modern) ── */
+body.light-mode .vl-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+body.light-mode .vl-card:hover {
+  border-color: #94a3b8;        /* visible slate border (replaces rgba-white) */
+  background: #f8fafc;
+}
+body.light-mode .vl-card-name {
+  color: #0f172a;
+}
+body.light-mode .vl-card-category {
+  color: #475569;
+}
+body.light-mode .vl-card-lang {
+  color: #64748b;
+}
+body.light-mode .vl-card-avatar {
+  background: #f1f5f9;          /* light slate instead of dark glass gradient */
+  border-color: #e2e8f0;
+  color: var(--lime);
+}
+
+/* ── voice-card-modern (cloned voices grid) ── */
+body.light-mode .voice-card-modern {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+body.light-mode .voice-card-modern:hover {
+  border-color: var(--lime);
+  box-shadow: 0 0 0 1px rgba(21, 128, 61, 0.15);
+}
+body.light-mode .voice-card-name {
+  color: #0f172a;
+}
+body.light-mode .voice-card-lang {
+  color: #64748b;
+}
+body.light-mode .voice-card-avatar {
+  background: #dcfce7;           /* pale green — lime icon on green tint */
+  border-color: rgba(21, 128, 61, 0.25);
+}
+
+/* ── vl-search icon ── */
+body.light-mode .vl-search-row svg {
+  color: #64748b;
+}
+
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

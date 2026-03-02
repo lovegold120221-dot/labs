@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateTTS } from '@/lib/services/echo';
 import { logApiUsage, requireApiPrincipal } from '@/lib/api-key-auth';
+import { resolveEchoAlias } from '@/lib/eburon-alias-router';
 
 export async function POST(req: Request) {
   const startedAtMs = Date.now();
@@ -16,6 +17,15 @@ export async function POST(req: Request) {
       errorMessage = "voiceId, text, modelId, and outputFormat are required";
       return NextResponse.json({ error: errorMessage }, { status });
     }
+
+    // Validate alias before hitting the upstream provider
+    const aliasDecision = resolveEchoAlias(modelId);
+    if (aliasDecision.status === 'ERROR') {
+      status = 400;
+      errorMessage = aliasDecision.publicMessage ?? 'Unknown Model';
+      return NextResponse.json({ error: errorMessage, code: aliasDecision.errorCode }, { status });
+    }
+
     const blob = await generateTTS(voiceId, text, modelId, outputFormat);
     return new Response(blob, {
       headers: { 'Content-Type': 'audio/mpeg' },

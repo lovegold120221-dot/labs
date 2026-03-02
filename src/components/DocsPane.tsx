@@ -52,7 +52,7 @@ const ENDPOINTS = [
       curl: (base: string) => `curl -X POST "${base}/echo/tts" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"voiceId":"EXAVITQu4vr4xnSDxMaL","text":"Hello world","modelId":"echo_flash_v2.5","outputFormat":"mp3_44100_128"}' \\
+  -d '{"voiceId":"EXAVITQu4vr4xnSDxMaL","text":"Hello world","modelId":"tts/echo_flash-v2.5","outputFormat":"mp3_44100_128"}' \\
   --output audio.mp3`,
       js: (base: string) => `const res = await fetch("${base}/echo/tts", {
   method: "POST",
@@ -63,7 +63,7 @@ const ENDPOINTS = [
   body: JSON.stringify({
     voiceId: "EXAVITQu4vr4xnSDxMaL",
     text: "Hello world",
-    modelId: "echo_flash_v2.5",
+    modelId: "tts/echo_flash-v2.5",
     outputFormat: "mp3_44100_128"
   })
 });
@@ -74,7 +74,7 @@ r = requests.post("${base}/echo/tts", headers={
 }, json={
     "voiceId": "EXAVITQu4vr4xnSDxMaL",
     "text": "Hello world",
-    "modelId": "echo_flash_v2.5",
+    "modelId": "tts/echo_flash-v2.5",
     "outputFormat": "mp3_44100_128"
 })
 with open("audio.mp3", "wb") as f:

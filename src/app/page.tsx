@@ -527,7 +527,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           voiceId: selectedVoice,
           text: ttsText,
-          modelId: "echo_flash_v2.5",
+          modelId: "tts/echo_flash-v2.5",
           outputFormat: "mp3_44100_128"
         }),
       });
@@ -3091,9 +3091,9 @@ export default function Dashboard() {
                   <div className="field">
                     <label>Default Echo Model</label>
                     <select title="Default model for TTS">
-                      <option>echo_flash_v2.5</option>
-                      <option>echo_multilingual_v2</option>
-                      <option>echo_turbo_v2.5</option>
+                      <option value="tts/echo_flash-v2.5">tts/echo_flash-v2.5</option>
+                      <option value="tts/echo_multilingual-v2">tts/echo_multilingual-v2</option>
+                      <option value="tts/echo_turbo-v2.5">tts/echo_turbo-v2.5</option>
                     </select>
                   </div>
                   <div className="field">
