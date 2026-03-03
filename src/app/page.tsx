@@ -58,6 +58,12 @@ const DEFAULT_SAMPLE_AGENT = {
 const DEFAULT_AGENT_NAME = "Customer Support Bot";
 const DEFAULT_AGENT_INTRO = "Hi! I'm your assistant. How can I help you today?";
 const DEFAULT_AGENT_SKILLS = "You are a helpful customer support agent. You can answer questions about products, process orders, and handle returns. Be friendly and concise.";
+const ECHO_MODEL_OPTIONS = [
+  { id: "tts/echo_flash-v2.5", label: "⚡ Eleven Flash v2.5" },
+  { id: "tts/echo_multilingual-v2", label: "🌍 Eleven Multilingual v2" },
+  { id: "tts/echo_turbo-v2.5", label: "🚀 Eleven Turbo v2.5" },
+] as const;
+const DEFAULT_ECHO_MODEL = ECHO_MODEL_OPTIONS[0].id;
 
 type ApiKeyItem = {
   id: string;
@@ -1980,7 +1986,7 @@ export default function Dashboard() {
 
                       <div className="el-field-group">
                         <label className="el-label">Model</label>
-                        <div className="el-select-fake">⚡ Eleven Flash v2.5</div>
+                        <div className="el-select-fake">{ECHO_MODEL_OPTIONS[0].label}</div>
                       </div>
 
                       <div className="el-field-group mt-auto">
@@ -3090,10 +3096,12 @@ export default function Dashboard() {
                   <h3 className="settings-title">Audio Defaults</h3>
                   <div className="field">
                     <label>Default Echo Model</label>
-                    <select title="Default model for TTS">
-                      <option value="tts/echo_flash-v2.5">tts/echo_flash-v2.5</option>
-                      <option value="tts/echo_multilingual-v2">tts/echo_multilingual-v2</option>
-                      <option value="tts/echo_turbo-v2.5">tts/echo_turbo-v2.5</option>
+                    <select title="Default model for TTS" defaultValue={DEFAULT_ECHO_MODEL}>
+                      {ECHO_MODEL_OPTIONS.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="field">
