@@ -1,0 +1,13 @@
+{
+  "id": "log-triage",
+  "name": "Log Triage & Analysis",
+  "category": "bug-fix",
+  "description": "Analyzes Next.js and Supabase logs to identify and categorize error patterns.",
+  "inputs": ["log_file_path"],
+  "outputs": ["triage-report.json"],
+  "priority": 2,
+  "execution_rules": {
+    "command": "node agent/skills/log-triage/log-triage.mjs {log_file_path}",
+    "timeout": 120
+  }
+}

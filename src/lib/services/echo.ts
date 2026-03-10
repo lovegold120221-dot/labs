@@ -1,5 +1,6 @@
 // cspell:ignore elevenlabs
 import { resolveEchoAlias } from '@/lib/eburon-alias-router';
+import { MOCK_VOICE_VARIANTS } from './mock-voices';
 const PROVIDER_KEY = process.env.TTS_PROVIDER_KEY || process.env.ECHO_PROVIDER_KEY || process.env.ELEVENLABS_API_KEY;
 const PROVIDER_BASE_URL = process.env.ECHO_PROVIDER_BASE_URL || 'https://api.elevenlabs.io/v1';
 
@@ -67,9 +68,17 @@ export type UserTtsHistoryItem = {
 };
 
 export async function fetchVoices(): Promise<Voice[]> {
-  const res = await echoProviderRequest('/voices');
-  const data = await res.json();
-  return data.voices;
+  let providerVoices: Voice[] = [];
+  try {
+    const res = await echoProviderRequest('/voices');
+    const data = await res.json();
+    providerVoices = data.voices || [];
+  } catch (error) {
+    console.warn('Failed to fetch provider voices, using mock only.', error);
+  }
+  
+  // Return merged voices, ensuring mock variants are included for "Explore"
+  return [...providerVoices, ...MOCK_VOICE_VARIANTS];
 }
 
 export async function generateTTS(voiceId: string, text: string, modelId: string, outputFormat: string) {

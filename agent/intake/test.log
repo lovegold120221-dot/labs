@@ -1,0 +1,6 @@
+2026-03-10T14:30:00Z INFO: Application started.
+2026-03-10T14:31:00Z ERROR: EBRN_KEY_MISSING in /api/echo/tts
+2026-03-10T14:32:15Z ERROR: EBRN_WL_DENY: Request blocked by whitelist for /api/orbit/call
+2026-03-10T14:33:45Z WARN: Slow response from /api/echo/stt
+2026-03-10T14:35:10Z ERROR: Internal Server Error in /api/user-assistant: Something went wrong.
+2026-03-10T14:36:20Z ERROR: EBU.TOKENS.CONTEXT_LIMIT: input_token_estimate exceeds max_input_tokens in /api/echo/tts

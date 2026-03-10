@@ -71,14 +71,14 @@ export async function POST(req: Request) {
           );
         }
         return NextResponse.json(
-          { error: `Cannot reach Ollama at ${OLLAMA_BASE}. Is the server running and reachable from this machine? (You do not need an OpenAI key—only if you prefer to use OpenAI instead of Ollama.)` },
+          { error: `Cannot reach Eburon AI at ${OLLAMA_BASE}. Is the server running and reachable from this machine?` },
           { status: 502 }
         );
       }
       clearTimeout(timeoutId);
       if (!res.ok) {
         const err = await res.text();
-        console.error('[tts-enhance] Ollama error:', res.status, err);
+        console.error('[tts-enhance] Eburon AI (Ollama) error:', res.status, err);
         let errDetail = '';
         try {
           const parsed = JSON.parse(err) as { error?: string };
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
         }
         return NextResponse.json(
           {
-            error: `Ollama returned ${res.status}. Check that the server at ${OLLAMA_BASE} is running and the model "${OLLAMA_MODEL}" exists (e.g. run \`ollama pull ${OLLAMA_MODEL}\`).${errDetail}`,
+            error: `Eburon AI returned ${res.status}. Check that the server at ${OLLAMA_BASE} is running and the model "${OLLAMA_MODEL}" exists.${errDetail}`,
           },
           { status: 502 }
         );

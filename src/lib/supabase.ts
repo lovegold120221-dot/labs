@@ -20,8 +20,24 @@ let supabaseClient: SupabaseClient | {
   }
 }
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('⚠️ Supabase credentials not available. Using mock client.')
+// Helper to validate URL format
+const isValidUrl = (url: string) => {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+const isConfigured = supabaseUrl && supabaseAnonKey && isValidUrl(supabaseUrl)
+
+if (!isConfigured) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('⚠️ Supabase credentials missing. Using mock client.')
+  } else {
+    console.warn('⚠️ Invalid Supabase URL provided. Using mock client.')
+  }
   
   supabaseClient = {
     auth: {

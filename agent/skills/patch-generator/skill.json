@@ -1,0 +1,13 @@
+{
+  "id": "patch-generator",
+  "name": "Surgical Patch Generator",
+  "category": "patching",
+  "description": "Proposes surgical code changes based on incident details and assigned skills.",
+  "inputs": ["routing_plan_path"],
+  "outputs": ["patch-proposal.json"],
+  "priority": 3,
+  "execution_rules": {
+    "command": "node agent/skills/patch-generator/patch-generator.mjs {routing_plan_path}",
+    "timeout": 180
+  }
+}

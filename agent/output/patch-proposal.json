@@ -1,0 +1,54 @@
+{
+  "proposed_at": "2026-03-10T14:45:11.668Z",
+  "source_routing_plan": "agent/output/routing-plan.json",
+  "patches": [
+    {
+      "incident_code": "EBRN_INTERNAL",
+      "assigned_skill": "backend-bug-fix",
+      "proposed_changes": [
+        {
+          "action": "CODE_PATCH",
+          "target": "api/echo/tts",
+          "details": "Generic backend fix for api/echo/tts. Investigate the route logic and add necessary error handling or validation."
+        }
+      ],
+      "reasoning": "Matched routing rule for backend-bug-fix based on incident attributes."
+    },
+    {
+      "incident_code": "EBRN_WL_DENY",
+      "assigned_skill": "config-audit",
+      "proposed_changes": [
+        {
+          "action": "UPDATE_WHITELIST",
+          "target": "agent/context/whitelist.json",
+          "details": "Request blocked by whitelist for api/orbit/call. Propose adding an allow rule to the whitelist."
+        }
+      ],
+      "reasoning": "Matched routing rule for config-audit based on incident attributes."
+    },
+    {
+      "incident_code": "EBRN_INTERNAL",
+      "assigned_skill": "backend-bug-fix",
+      "proposed_changes": [
+        {
+          "action": "CODE_PATCH",
+          "target": "api/user-assistant:",
+          "details": "Generic backend fix for api/user-assistant:. Investigate the route logic and add necessary error handling or validation."
+        }
+      ],
+      "reasoning": "Matched routing rule for backend-bug-fix based on incident attributes."
+    },
+    {
+      "incident_code": "EBU.TOKENS.CONTEXT_LIMIT",
+      "assigned_skill": "backend-bug-fix",
+      "proposed_changes": [
+        {
+          "action": "REDUCE_INPUT_SIZE",
+          "target": "api/echo/tts",
+          "details": "Token limit exceeded. Propose adding input truncation or a larger model alias in the request parameters."
+        }
+      ],
+      "reasoning": "Matched routing rule for backend-bug-fix based on incident attributes."
+    }
+  ]
+}

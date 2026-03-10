@@ -1,0 +1,36 @@
+{
+  "project_name": "ubiquitous-waffle",
+  "package_manager": "npm",
+  "framework": "Next.js 16 (App Router)",
+  "language": "TypeScript",
+  "repo_type": "single",
+  "commands": {
+    "dev": "npm run dev",
+    "build": "npm run build",
+    "start": "npm run start",
+    "lint": "npm run lint",
+    "smoke_test": "npm run smoke",
+    "typecheck": "npx tsc --noEmit"
+  },
+  "deployment": {
+    "target": "Vercel",
+    "staging_url": "https://ubiquitous-waffle-staging.vercel.app",
+    "production_url": "https://ubiquitous-waffle.vercel.app"
+  },
+  "env_requirements": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "VAPI_API_KEY"
+  ],
+  "directories": {
+    "src": "src",
+    "components": "src/components",
+    "pages": "src/app",
+    "api": "src/app/api",
+    "lib": "src/lib",
+    "services": "src/lib/services",
+    "agent": "agent",
+    "docs": "docs"
+  }
+}

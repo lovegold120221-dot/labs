@@ -1,0 +1,49 @@
+{
+  "analyzed_at": "2026-03-10T14:37:06.421Z",
+  "log_source": "agent/intake/test.log",
+  "total_lines": 7,
+  "incidents": [
+    {
+      "line_number": 2,
+      "timestamp": "2026-03-10T14:31:00",
+      "code": "EBRN_INTERNAL",
+      "message": "2026-03-10T14:31:00Z ERROR: EBRN_KEY_MISSING in /api/echo/tts",
+      "severity": "S2",
+      "route": "api/echo/tts",
+      "status": 500
+    },
+    {
+      "line_number": 3,
+      "timestamp": "2026-03-10T14:32:15",
+      "code": "EBRN_WL_DENY",
+      "message": "2026-03-10T14:32:15Z ERROR: EBRN_WL_DENY: Request blocked by whitelist for /api/orbit/call",
+      "severity": "S2",
+      "route": "api/orbit/call",
+      "status": 403
+    },
+    {
+      "line_number": 5,
+      "timestamp": "2026-03-10T14:35:10",
+      "code": "EBRN_INTERNAL",
+      "message": "2026-03-10T14:35:10Z ERROR: Internal Server Error in /api/user-assistant: Something went wrong.",
+      "severity": "S2",
+      "route": "api/user-assistant:",
+      "status": 500
+    },
+    {
+      "line_number": 6,
+      "timestamp": "2026-03-10T14:36:20",
+      "code": "EBU.TOKENS.CONTEXT_LIMIT",
+      "message": "2026-03-10T14:36:20Z ERROR: EBU.TOKENS.CONTEXT_LIMIT: input_token_estimate exceeds max_input_tokens in /api/echo/tts",
+      "severity": "S3",
+      "route": "api/echo/tts",
+      "status": 400
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 3,
+    "medium": 1,
+    "low": 0
+  }
+}

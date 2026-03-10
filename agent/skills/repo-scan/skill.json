@@ -1,0 +1,13 @@
+{
+  "id": "repo-scan",
+  "name": "Repository Scanner",
+  "category": "core",
+  "description": "Scans the repository to identify tech stack, directories, API routes, and components.",
+  "inputs": [],
+  "outputs": ["repo-metadata.json"],
+  "priority": 1,
+  "execution_rules": {
+    "command": "node agent/skills/repo-scan/repo-scan.mjs",
+    "timeout": 60
+  }
+}

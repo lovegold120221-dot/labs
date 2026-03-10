@@ -1,0 +1,22 @@
+{
+  "id": "nextjs-supabase",
+  "name": "Next.js + Supabase (App Router)",
+  "conventions": {
+    "routing": "App Router (src/app)",
+    "data_fetching": "Server Components (fetch/supabase-server) or Client Components (supabase-js)",
+    "styling": "Tailwind CSS v4 (Vanilla CSS preferred)",
+    "api_routes": "src/app/api",
+    "services": "src/lib/services"
+  },
+  "rules": {
+    "no_inline_styles": true,
+    "use_typescript": true,
+    "use_rls": true,
+    "use_edge_functions": "optional"
+  },
+  "patterns": {
+    "component_folder": "src/components",
+    "api_response": "{ data: any, error: any }",
+    "auth_check": "Supabase Auth Helpers"
+  }
+}

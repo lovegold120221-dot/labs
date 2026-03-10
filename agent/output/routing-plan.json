@@ -1,0 +1,37 @@
+{
+  "routed_at": "2026-03-10T14:39:50.659Z",
+  "source_report": "agent/output/triage-1773153426372.json",
+  "assignments": [
+    {
+      "incident_code": "EBRN_INTERNAL",
+      "incident_route": "api/echo/tts",
+      "assigned_skill": "backend-bug-fix",
+      "reason": "Matched routing rule for backend-bug-fix based on incident attributes."
+    },
+    {
+      "incident_code": "EBRN_WL_DENY",
+      "incident_route": "api/orbit/call",
+      "assigned_skill": "config-audit",
+      "reason": "Matched routing rule for config-audit based on incident attributes."
+    },
+    {
+      "incident_code": "EBRN_INTERNAL",
+      "incident_route": "api/user-assistant:",
+      "assigned_skill": "backend-bug-fix",
+      "reason": "Matched routing rule for backend-bug-fix based on incident attributes."
+    },
+    {
+      "incident_code": "EBU.TOKENS.CONTEXT_LIMIT",
+      "incident_route": "api/echo/tts",
+      "assigned_skill": "backend-bug-fix",
+      "reason": "Matched routing rule for backend-bug-fix based on incident attributes."
+    }
+  ],
+  "summary": {
+    "recommended_skills": [
+      "backend-bug-fix",
+      "config-audit"
+    ],
+    "total_assignments": 4
+  }
+}

@@ -38,26 +38,35 @@ import { User } from "@supabase/supabase-js";
 const orbit = typeof window !== "undefined" ? new OrbitCore(process.env.NEXT_PUBLIC_ORBIT_TOKEN || "") : null;
 
 const languageDialectMap: Record<string, string[]> = {
-  "Filipino": ["Cebuano", "Tagalog", "Ilocano", "Bicolano"],
-  "English": ["USA", "UK", "Australia", "Canada", "India", "Ireland"],
-  "Spanish": ["Spain", "Mexico", "Argentina", "Colombia"],
-  "French": ["France", "Canada", "Belgium"],
-  "German": ["Germany", "Switzerland", "Austria"],
-  "Hindi": ["Standard Hindi", "Bhojpuri", "Punjabi"],
-  "Japanese": ["Tokyo", "Osaka", "Kyoto"],
-  "Dutch": ["Belgium", "Netherlands"],
+  "Filipino": ["Tagalog", "Cebuano", "Ilocano", "Bicolano", "Hiligaynon", "Waray"],
+  "English": ["USA", "UK", "Australia", "Canada", "India", "Ireland", "South Africa", "New Zealand", "Singapore"],
+  "Spanish": ["Spain", "Mexico", "Argentina", "Colombia", "Chile", "Peru", "Puerto Rico", "USA"],
+  "French": ["France", "Canada", "Belgium", "Switzerland", "Senegal", "Morocco"],
+  "German": ["Germany", "Switzerland", "Austria", "Liechtenstein"],
+  "Hindi": ["Standard Hindi", "Bhojpuri", "Punjabi", "Marathi", "Gujarati", "Bengali"],
+  "Japanese": ["Tokyo", "Osaka", "Kyoto", "Fukuoka", "Nagoya"],
+  "Dutch": ["Netherlands", "Belgium (Flemish)", "Limburgish", "Suriname"],
+  "Portuguese": ["Brazil", "Portugal", "Angola", "Mozambique"],
+  "Italian": ["Italy", "Switzerland"],
+  "Chinese": ["Mandarin (Simplified)", "Mandarin (Traditional)", "Cantonese", "Hokkien"],
+  "Korean": ["Seoul", "Busan", "Jeju"],
+  "Arabic": ["Modern Standard", "Egypt", "Saudi Arabia", "UAE", "Levant", "Maghreb"],
+  "Turkish": ["Istanbul", "Ankara", "Izmir"],
+  "Vietnamese": ["Hanoi", "Ho Chi Minh City", "Da Nang"],
+  "Indonesian": ["Standard", "Javanese", "Sundanese"],
+  "Russian": ["Russia", "Belarus", "Kazakhstan"],
 };
 
 // Default sample agent (MorganCsr) for testing Orbit Web Call
 const DEFAULT_SAMPLE_AGENT = {
   id: "019c51ea-8ce8-4962-9b83-70023ec0d6c2",
-  name: "MorganCsr",
+  name: "Customer Support Specialist",
 } as const;
 
 // Fallback defaults when Ivan not found
-const DEFAULT_AGENT_NAME = "Customer Support Bot";
-const DEFAULT_AGENT_INTRO = "Hi! I'm your assistant. How can I help you today?";
-const DEFAULT_AGENT_SKILLS = "You are a helpful customer support agent. You can answer questions about products, process orders, and handle returns. Be friendly and concise.";
+const DEFAULT_AGENT_NAME = "Customer Support Specialist";
+const DEFAULT_AGENT_INTRO = "Hi there! I'm here to help you with any questions or issues you might have. What can I do for you today?";
+const DEFAULT_AGENT_SKILLS = "You are an empathetic and knowledgeable Customer Support Specialist. Your goal is to resolve product issues and answer customer questions efficiently and kindly.";
 const ECHO_MODEL_OPTIONS = [
   { id: "tts/echo_flash-v2.5", label: "⚡ Echo Flash v2.5" },
   { id: "tts/echo_multilingual-v2", label: "🌍 Echo Multilingual v2" },
@@ -415,7 +424,7 @@ export default function Dashboard() {
     { id: "pane-audio", label: "Audio", icon: <Volume2 size={18} />, desc: "Voices, Text to Speech, Speech to Text, History" },
     { id: "pane-clone", label: "Clone", icon: <Copy size={18} />, desc: "Instantly clone voices with full metadata tagging" },
     { id: "pane-Create", label: "Create", icon: <Mic size={18} />, desc: "Describe your agent with voice or text" },
-    { id: "pane-agents", label: "Agents", icon: <Users size={18} />, desc: "Create and connect to AI agents" },
+    { id: "pane-agents", label: "Templates", icon: <Users size={18} />, desc: "Create and connect to AI templates" },
     { id: "pane-call-logs", label: "Call Logs", icon: <Phone size={18} />, desc: "All call history" },
     { id: "pane-docs", label: "Docs", icon: <FileText size={18} />, desc: "API documentation and test inbound" },
     { id: "pane-settings", label: "Settings", icon: <SettingsIcon size={18} />, desc: "Configure default Echo models and format" },
@@ -831,7 +840,7 @@ export default function Dashboard() {
   const createGenerateSectionRef = useRef<HTMLDivElement>(null);
   const [dialerNumber, setDialerNumber] = useState("");
   const [phonebookEntries, setPhonebookEntries] = useState<{ name: string; number: string }[]>([]);
-  const [selectedDialerAgentId, setSelectedDialerAgentId] = useState("");
+  const [selectedDialerAgentId, setSelectedDialerAgentId] = useState<string>(DEFAULT_SAMPLE_AGENT.id);
   const [dialerCallStatus, setDialerCallStatus] = useState("");
   const [isDialerCalling, setIsDialerCalling] = useState(false);
   const [callLogs, setCallLogs] = useState<{ id: string; type?: string; status?: string; customer?: { number?: string }; assistantId?: string; createdAt?: string; endedAt?: string }[]>([]);
@@ -1001,7 +1010,7 @@ export default function Dashboard() {
       const res = await authedFetch("/api/orbit/assistants");
       const data = await res.json();
       if (!res.ok) {
-        const msg = typeof data?.error === 'string' ? data.error : 'Failed to load agents';
+        const msg = typeof data?.error === 'string' ? data.error : 'Failed to load templates';
         setAgentBasesError(msg);
         setAgentBases([]);
         return;
@@ -1009,7 +1018,7 @@ export default function Dashboard() {
       setAgentBases(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch bases:", error);
-      setAgentBasesError("Could not load agents. Check your API key.");
+      setAgentBasesError("Could not load templates. Check your API key.");
       setAgentBases([]);
     } finally {
       setIsFetchingBases(false);
@@ -1724,8 +1733,8 @@ export default function Dashboard() {
             >
               {isFullWidthHeight ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </button>
-            <button className="btn" onClick={() => setIsModalOpen(true)} title="Configuration">
-              <Key size={16} className="mr-2" /> <span className="text-lime">Configured</span>
+            <button className="btn" onClick={() => setActiveTab("pane-settings")} title="API Key">
+              <Key size={16} className="mr-2" /> <span className="text-lime">API Key</span>
             </button>
           </div>
         </div>
@@ -2224,6 +2233,16 @@ export default function Dashboard() {
                     <option value="German">German</option>
                     <option value="Hindi">Hindi</option>
                     <option value="Japanese">Japanese</option>
+                    <option value="Dutch">Dutch</option>
+                    <option value="Portuguese">Portuguese</option>
+                    <option value="Italian">Italian</option>
+                    <option value="Chinese">Chinese</option>
+                    <option value="Korean">Korean</option>
+                    <option value="Arabic">Arabic</option>
+                    <option value="Turkish">Turkish</option>
+                    <option value="Vietnamese">Vietnamese</option>
+                    <option value="Indonesian">Indonesian</option>
+                    <option value="Russian">Russian</option>
                     <option value="en">Auto Detect</option>
                     {models.find(m => m.model_id === "echo_multilingual_v2" || m.model_id === "eleven_multilingual_v2")?.languages.map(lang => (
                       <option key={lang.language_id} value={lang.language_id}>
@@ -2754,13 +2773,13 @@ export default function Dashboard() {
           {activeTab === "pane-agents" && (
             <div className="tab-pane active">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <label className="block">Agents ({displayAgents.length})</label>
+                <label className="block">Templates ({displayAgents.length})</label>
                 <button
                   type="button"
                   className="btn icon-only"
                   onClick={fetchAgentBases}
                   disabled={isFetchingBases}
-                  title="Refresh agents"
+                  title="Refresh templates"
                 >
                   {isFetchingBases ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                 </button>
@@ -2789,7 +2808,7 @@ export default function Dashboard() {
                 ))}
                 {displayAgents.length === 0 && !isFetchingBases && !agentBasesError && (
                   <div className="placeholder-pane h-20 text-2xs col-span-2">
-                    No agents yet
+                    No templates yet
                   </div>
                 )}
               </div>
@@ -2942,122 +2961,9 @@ export default function Dashboard() {
 
           {activeTab === "pane-docs" && (
             <div className="tab-pane active docs-pane-wrapper">
-              <section className="settings-card docs-access-card">
-                <div className="docs-access-header">
-                  <div>
-                    <h3 className="settings-title">API Access</h3>
-                    <p className="settings-note">
-                      Create API keys from your account and monitor usage directly from Docs.
-                    </p>
-                  </div>
-                  {user && (
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() => {
-                        fetchApiKeys();
-                        fetchApiUsage();
-                      }}
-                      disabled={isApiKeysLoading}
-                    >
-                      {isApiKeysLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                      Refresh
-                    </button>
-                  )}
-                </div>
-                {!user ? (
-                  <div className="settings-note">Sign in first to create and manage API keys.</div>
-                ) : (
-                  <>
-                    <div className="api-keys-create-row">
-                      <input
-                        type="text"
-                        value={newApiKeyName}
-                        onChange={(e) => setNewApiKeyName(e.target.value)}
-                        placeholder="Key name (e.g., Production app)"
-                        title="API key name"
-                      />
-                      <button className="btn primary" onClick={handleCreateApiKey}>Create Key</button>
-                    </div>
-                    {newlyCreatedApiKey && (
-                      <div className="api-key-secret">
-                        <code>{newlyCreatedApiKey}</code>
-                        <button
-                          type="button"
-                          className="btn"
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(newlyCreatedApiKey);
-                              setApiKeysStatus("API key copied.");
-                            } catch {
-                              setApiKeysStatus("Could not copy key.");
-                            }
-                          }}
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    )}
-                    {apiKeysStatus && <div className="settings-note">{apiKeysStatus}</div>}
-                    <div className="docs-access-grid">
-                      <div className="api-keys-list docs-access-list">
-                        {isApiKeysLoading ? (
-                          <div className="settings-note">Loading API keys...</div>
-                        ) : apiKeys.length === 0 ? (
-                          <div className="settings-note">No API keys yet.</div>
-                        ) : (
-                          apiKeys.map((k) => (
-                            <div key={k.id} className="api-key-row">
-                              <div className="api-key-meta">
-                                <strong>{k.name}</strong>
-                                <small>{k.key_prefix}… · Created {new Date(k.created_at).toLocaleString()}</small>
-                                <small>
-                                  Last used: {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "Never"}
-                                </small>
-                              </div>
-                              <button
-                                type="button"
-                                className="btn danger"
-                                onClick={() => handleRevokeApiKey(k.id)}
-                                disabled={!!k.revoked_at}
-                              >
-                                {k.revoked_at ? "Revoked" : "Revoke"}
-                              </button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                      <div className="docs-access-usage">
-                        {apiUsageSummary ? (
-                          <>
-                            <div className="usage-grid">
-                              <div className="usage-metric"><span>Total</span><strong>{apiUsageSummary.totalRequests}</strong></div>
-                              <div className="usage-metric"><span>Success</span><strong>{apiUsageSummary.successRequests}</strong></div>
-                              <div className="usage-metric"><span>Errors</span><strong>{apiUsageSummary.errorRequests}</strong></div>
-                              <div className="usage-metric"><span>Avg Latency</span><strong>{apiUsageSummary.avgLatencyMs} ms</strong></div>
-                            </div>
-                            <div className="usage-endpoints">
-                              {apiUsageSummary.endpointStats.slice(0, 5).map((s) => (
-                                <div key={s.endpoint} className="usage-endpoint-row">
-                                  <code>{s.endpoint}</code>
-                                  <span>{s.requests} req</span>
-                                  <span>{s.errors} err</span>
-                                  <span>{s.avgLatencyMs} ms</span>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="settings-note">No usage data yet.</div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </section>
               <DocsPane
                 apiBaseUrl={apiBaseUrl}
-                onCopyFeedback={(msg) => {
+                onCopyFeedback={(msg: string) => {
                   setDocsCopyFeedback(msg);
                   setTimeout(() => setDocsCopyFeedback(""), 2000);
                 }}

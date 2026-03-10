@@ -1,0 +1,15 @@
+{
+  "fragile_modules": [],
+  "recurring_failures": [],
+  "blocked_dependencies": [],
+  "preferred_code_patterns": [
+    "Use fetch in Server Components",
+    "Use supabase-js in Client Components",
+    "Use Tailwind CSS for all styling",
+    "Lucide React for icons"
+  ],
+  "approved_ui_styles": [
+    "Clean, modern aesthetic",
+    "Consistent spacing and interactive feedback"
+  ]
+}
