@@ -818,8 +818,8 @@ export default function Dashboard() {
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
 
   // Create-from-scratch form (beside iPhone dialer)
-  const [agentLanguage, setAgentLanguage] = useState("en");
-  const [agentVoice, setAgentVoice] = useState("vapi:elliot");
+  const [agentLanguage, setAgentLanguage] = useState("en-US");
+  const [agentVoice, setAgentVoice] = useState("vapi:Nico");
   const [agentIntroSpiel, setAgentIntroSpiel] = useState(DEFAULT_AGENT_INTRO);
   const [agentSkillsPrompt, setAgentSkillsPrompt] = useState(DEFAULT_AGENT_SKILLS);
   const [agentKnowledgeFiles, setAgentKnowledgeFiles] = useState<{ id: string; name: string }[]>([]);
@@ -1758,6 +1758,20 @@ export default function Dashboard() {
                 // Derive use-case chips from voice labels
                 const useCaseSet = new Set<string>();
                 voices.forEach(v => { if (v.labels?.use_case) useCaseSet.add(v.labels.use_case); });
+                const styles = [
+                  "Action Hero", "Adventure", "Animation", "Architecture", "Audiobook", 
+                  "Children's Stories", "Cinema", "Conversational", "Cooking", "Corporate", 
+                  "Customer Support", "Design", "Documentary", "E-commerce", "E-learning", 
+                  "Education", "Engineering", "Financial", "Folk Stories", "Gaming", 
+                  "Government", "Healthcare", "History", "IT Services", "Inspiration", 
+                  "K-Pop News", "Literature", "Local News", "Luxury", "Meditation", 
+                  "Military", "Mythology", "Narrative", "Nature", "News", "Outdoors", 
+                  "Poetry", "Politics", "Professional", "Radio", "Showbiz", "Social Media", 
+                  "Sports", "Tech Support", "Tourism", "Traditional", "Travel", "Urban", 
+                  "Vlog", "Weather", "Advertisement", "Characters Animation", "Conversational", 
+                  "Entertainment TV", "Informative Educational", "Narrative Story", "Social Media"
+                ];
+                styles.forEach(s => useCaseSet.add(s));
                 const useCaseChips = [...useCaseSet].sort();
 
                 // Derive unique languages
@@ -1841,31 +1855,40 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {/* Use-case & language filter chips */}
-                  <div className="vl-chips-row">
-                    <button type="button" className={`vl-chip ${!activeLanguageFilter ? "" : "active"}`} onClick={() => setVoiceFilterLanguage(activeLanguageFilter ? "all" : allLanguages[0] || "all")}>
-                      🌐 Language
-                    </button>
-                    {useCaseChips.map(uc => (
-                      <button key={uc} type="button" className={`vl-chip ${activeUseCase === uc ? "active" : ""}`} onClick={() => setVoiceFilterLanguage(activeUseCase === uc ? "all" : uc)}>
-                        {uc}
-                      </button>
-                    ))}
-                    {(activeUseCase || activeLanguageFilter || voiceSearchQuery) && (
-                      <button type="button" className="vl-chip vl-chip-clear" onClick={() => { setVoiceFilterLanguage("all"); setVoiceSearchQuery(""); }}>
-                        <X size={12} /> Clear
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Language dropdown (conditionally shown) */}
-                  {activeLanguageFilter !== null && (
-                    <div className="vl-language-dropdown">
-                      <select className="voice-filter-select" value={activeLanguageFilter} onChange={e => setVoiceFilterLanguage(e.target.value)} aria-label="Language">
+                  {/* Filters row with dropdowns */}
+                  <div className="vl-filters-row">
+                    <div className="vl-filter-group">
+                      <div className="vl-filter-label">🌐 Language</div>
+                      <select 
+                        className="vl-select" 
+                        value={activeLanguageFilter || "all"} 
+                        onChange={e => setVoiceFilterLanguage(e.target.value)}
+                        title="Select Language"
+                      >
+                        <option value="all">All Languages</option>
                         {allLanguages.map(l => <option key={l} value={l}>{l}</option>)}
                       </select>
                     </div>
-                  )}
+
+                    <div className="vl-filter-group">
+                      <div className="vl-filter-label">🎯 Style</div>
+                      <select 
+                        className="vl-select" 
+                        value={activeUseCase || "all"} 
+                        onChange={e => setVoiceFilterLanguage(e.target.value)}
+                        title="Select Style"
+                      >
+                        <option value="all">All Styles</option>
+                        {useCaseChips.map(uc => <option key={uc} value={uc}>{uc}</option>)}
+                      </select>
+                    </div>
+
+                    {(activeUseCase || activeLanguageFilter || voiceSearchQuery) && (
+                      <button type="button" className="vl-filter-clear" onClick={() => { setVoiceFilterLanguage("all"); setVoiceSearchQuery(""); }}>
+                        <X size={14} /> Clear
+                      </button>
+                    )}
+                  </div>
 
                   {/* Audio visualizer */}
                   {currentAudio && (

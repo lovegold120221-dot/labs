@@ -2399,6 +2399,114 @@ body.light-mode .call-log-transcript-toolbar .btn {
 .text-bad {
   color: var(--bad);
 }
+.vl-filters-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.vl-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+.vl-filter-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--faint);
+  font-weight: 600;
+}
+.vl-select {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  padding: 8px 12px;
+  width: 100%;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.vl-select:hover {
+  border-color: var(--limeDim);
+}
+.vl-select:focus {
+  border-color: var(--lime);
+}
+.vl-filter-clear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  color: var(--faint);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.vl-filter-clear:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* Docs Playground Fixes */
+.docs-playground {
+  display: grid;
+  grid-template-columns: 240px 1fr 400px;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+}
+.docs-pg-sidebar {
+  border-right: 1px solid var(--stroke);
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+}
+.docs-pg-request {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-right: 1px solid var(--stroke);
+  background: var(--bg);
+}
+.docs-pg-output {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--card);
+}
+.docs-pg-panel {
+  border-bottom: 1px solid var(--stroke);
+  display: flex;
+  flex-direction: column;
+}
+.docs-pg-panel:last-child {
+  border-bottom: none;
+}
+.docs-pg-panel-content {
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow: auto;
+}
+.docs-pg-code-panel {
+  flex: 1;
+}
+.docs-pg-response-panel {
+  flex: 1;
+}
+
 .text-muted {
   color: var(--muted);
 }
