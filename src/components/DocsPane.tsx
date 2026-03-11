@@ -295,6 +295,11 @@ export default function DocsPane({
               Sign in to manage API keys.
             </div>
           )}
+          {apiKeysStatus && (
+            <div className="mt-2 text-[10px] text-lime opacity-80 font-medium">
+              {apiKeysStatus}
+            </div>
+          )}
         </div>
 
         <div className="docs-pg-section">

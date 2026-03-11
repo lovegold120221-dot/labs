@@ -27,15 +27,12 @@ import {
 } from "lucide-react";
 
 import OrbitCore from "@vapi-ai/web";
-import { Voice, UserTtsHistoryItem } from "@/lib/services/echo";
+import { Voice } from "@/lib/services/echo";
 import DocsPane from "@/components/DocsPane";
 import { enhanceTextForTTS, normalizeForTTS, BREAK_TAG } from "@/lib/tts-enhancer";
 import { supabase } from "@/lib/supabase";
-import { User } from "@supabase/supabase-js";
 
 // type Voice moved to echo.ts
-
-const orbit = typeof window !== "undefined" ? new OrbitCore(process.env.NEXT_PUBLIC_ORBIT_TOKEN || "") : null;
 
 const languageDialectMap: Record<string, string[]> = {
   "Filipino": ["Tagalog", "Cebuano", "Ilocano", "Bicolano", "Hiligaynon", "Waray"],
@@ -130,7 +127,7 @@ export default function Dashboard() {
   const voicePreviewAnimationRef = useRef<number | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<unknown>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -139,7 +136,7 @@ export default function Dashboard() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isAuthProcessing, setIsAuthProcessing] = useState(false);
 
-  const [history, setHistory] = useState<UserTtsHistoryItem[]>([]);
+  const [history, setHistory] = useState<unknown[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const historyAudioRef = useRef<HTMLAudioElement>(null);
@@ -157,34 +154,18 @@ export default function Dashboard() {
   const [newApiKeyName, setNewApiKeyName] = useState("Default key");
   const [newlyCreatedApiKey, setNewlyCreatedApiKey] = useState("");
   const [apiUsageSummary, setApiUsageSummary] = useState<ApiUsageSummary | null>(null);
+  const audioVizIdStr = useId();
 
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setApiBaseUrl(`${window.location.origin}/api/v1`);
+  // Initialize OrbitCore inside the component for better React integration
+  const orbit = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const token = process.env.NEXT_PUBLIC_ORBIT_TOKEN || "";
+    if (!token) {
+      console.warn("NEXT_PUBLIC_ORBIT_TOKEN is missing. Web calls will not work.");
+      return null;
     }
+    return new OrbitCore(token);
   }, []);
-
-  useEffect(() => {
-    if (!downloadMenuId) return;
-    const handler = (e: MouseEvent) => {
-      if (downloadMenuRef.current && !downloadMenuRef.current.contains(e.target as Node)) {
-        setDownloadMenuId(null);
-      }
-    };
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, [downloadMenuId]);
-
-  // Play history audio after React has updated the DOM (avoids AbortError from src update during play)
-  useEffect(() => {
-    if (!historyAudioUrl || !playingHistoryId || !historyAudioRef.current) return;
-    const el = historyAudioRef.current;
-    el.pause();
-    el.play().catch(() => {});
-  }, [historyAudioUrl, playingHistoryId]);
-
-  const [models, setModels] = useState<{ model_id: string; name: string; languages: { language_id: string; name: string }[] }[]>([]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("echo-theme") as "dark" | "light" || "dark";
@@ -237,10 +218,7 @@ export default function Dashboard() {
     orbit.on("call-start", onCallStart);
     orbit.on("call-end", onCallEnd);
     orbit.on("error", onError);
-    orbit.on("message", (message) => {
-      console.log("Vapi Message:", message.type, message);
-      onMessage(message);
-    });
+    orbit.on("message", onMessage);
     orbit.on("volume-level", onVolumeLevel);
 
     return () => {
@@ -250,176 +228,41 @@ export default function Dashboard() {
       orbit.off("message", onMessage);
       orbit.off("volume-level", onVolumeLevel);
     };
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    supabase.auth.getSession().then((response: any) => {
-      const { data: { session } } = response;
-      setUser(session?.user ?? null);
-      setIsAuthLoading(false);
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      if (subscription) subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return setAuthStatus("Email and password required.");
-    setIsAuthProcessing(true);
-    setAuthStatus("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setAuthStatus(error.message);
-    setIsAuthProcessing(false);
-  };
-
-  const handleEmailSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) return setAuthStatus("Passwords do not match.");
-    setIsAuthProcessing(true);
-    setAuthStatus("");
-    const response = await supabase.auth.signUp({
-      email,
-      password
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error, data } = response as { error: any; data: any };
-    if (error) {
-      setAuthStatus(error.message);
-    } else if (data.user && data.user.email_confirmed_at) {
-      setAuthStatus("Registration successful! You are now logged in.");
-      // User is automatically logged in if email is confirmed
-      setUser(data.user);
-    } else {
-      setAuthStatus("Registration successful! You can now log in.");
-    }
-    setIsAuthProcessing(false);
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return setAuthStatus("Email required.");
-    setIsAuthProcessing(true);
-    setAuthStatus("");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) setAuthStatus(error.message);
-    else setAuthStatus("Reset link sent! Check your email.");
-    setIsAuthProcessing(false);
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
-
-  const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("echo-theme", newTheme);
-    const isLight = newTheme === "light";
-    document.documentElement.classList.toggle("light-mode", isLight);
-    document.body.classList.toggle("light-mode", isLight);
-  };
-
-  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
-  }, []);
-
-  const authedFetch = useCallback(async (input: RequestInfo | URL, init: RequestInit = {}) => {
-    const authHeaders = await getAuthHeaders();
-    const headers = new Headers(init.headers ?? {});
-    Object.entries(authHeaders).forEach(([k, v]) => headers.set(k, v));
-    return fetch(input, { ...init, headers });
-  }, [getAuthHeaders]);
-
-  const fetchRealTimeHistory = useCallback(async () => {
-    setIsHistoryLoading(true);
-    setHistoryError(null);
-    try {
-      const res = await authedFetch("/api/echo/history?page_size=50&sort_direction=desc");
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        const msg = (errBody as { error?: string })?.error || `Failed to load history (${res.status})`;
-        setHistoryError(msg);
-        setHistory([]);
-        return;
-      }
-      const data = await res.json();
-      const items = Array.isArray(data) ? data : [];
-      setHistory(items.map((h: { history_item_id: string; text: string; voice_id: string; voice_name: string; date_unix: number }) => ({
-        id: h.history_item_id,
-        text: h.text,
-        voice_id: h.voice_id,
-        voice_name: h.voice_name,
-        audio_path: "",
-        created_at: new Date(h.date_unix * 1000).toISOString(),
-      })));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to fetch history.";
-      setHistoryError(msg);
-      setHistory([]);
-    } finally {
-      setIsHistoryLoading(false);
-    }
-  }, [authedFetch]);
-
-  useEffect(() => {
-    if (activeTab === "pane-audio" && audioSubTab === "history") {
-      fetchRealTimeHistory();
-    }
-  }, [activeTab, audioSubTab, fetchRealTimeHistory]);
-
-  const fetchCallLogs = useCallback(async () => {
-    setIsCallLogsLoading(true);
-    try {
-      const params = new URLSearchParams({ limit: "100" });
-      const res = await authedFetch(`/api/orbit/calls?${params}`, { cache: "no-store" });
-      const data = await res.json();
-      if (Array.isArray(data)) setCallLogs(data);
-      else setCallLogs([]);
-    } catch {
-      setCallLogs([]);
-    } finally {
-      setIsCallLogsLoading(false);
-    }
-  }, [authedFetch]);
-
-  useEffect(() => {
-    if (activeTab === "pane-agents" || activeTab === "pane-Create") fetchCallLogs();
-  }, [activeTab, fetchCallLogs]);
-
-  useEffect(() => {
-    if (activeTab === "pane-call-logs") fetchCallLogs();
-  }, [activeTab, fetchCallLogs]);
+  }, [orbit]);
 
   const handleToggleCall = async (assistantId: string) => {
-    if (callStatus === "active") {
-      orbit?.stop();
+    if (!orbit) {
+      alert("Voice call engine not initialized. Check your API token.");
       return;
     }
-    const idToUse = assistantId || DEFAULT_SAMPLE_AGENT.id;
+
+    if (callStatus === "active") {
+      orbit.stop();
+      return;
+    }
+
+    const idToUse = assistantId || selectedDialerAgentId || DEFAULT_SAMPLE_AGENT.id;
+    if (!idToUse) {
+      alert("No agent ID selected.");
+      return;
+    }
+
     setShowTestCallModal(true);
     setCallVolume(0);
     setTranscript([]);
     setLiveInterimTranscript({ user: "", agent: "" });
     setActiveAgentId(idToUse);
     setCallStatus("loading");
+
     try {
-      await orbit?.start(idToUse);
+      console.log("Starting web call for assistant:", idToUse);
+      await orbit.start(idToUse);
     } catch (err) {
-      console.error("Failed to start call:", err);
+      console.error("Failed to start web call:", err);
       setCallStatus("idle");
       setActiveAgentId("");
       setShowTestCallModal(false);
+      alert("Failed to connect to voice engine. Please check your internet connection or agent ID.");
     }
   };
 
@@ -2815,44 +2658,79 @@ export default function Dashboard() {
           )}
 
           {activeTab === "pane-agents" && (
-            <div className="tab-pane active">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <label className="block">Templates ({displayAgents.length})</label>
-                <button
-                  type="button"
-                  className="btn icon-only"
-                  onClick={fetchAgentBases}
-                  disabled={isFetchingBases}
-                  title="Refresh templates"
-                >
-                  {isFetchingBases ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                </button>
+            <div className="tab-pane active vl-root">
+              <div className="vl-tabs-row">
+                <div className="vl-tabs">
+                  <div className="vl-tab active">
+                    <Users size={14} />
+                    Agent Templates
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="pane-meta">{displayAgents.length} agents</span>
+                  <button
+                    type="button"
+                    className="btn icon-only !w-8 !h-8"
+                    onClick={fetchAgentBases}
+                    disabled={isFetchingBases}
+                    title="Refresh templates"
+                  >
+                    {isFetchingBases ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-2">
+
+              {agentBasesError && (
+                <div className="p-3 rounded-lg border border-bad/30 bg-bad/5 text-bad text-xs">
+                  {agentBasesError}
+                </div>
+              )}
+
+              <div className="vl-grid">
                 {displayAgents.map((a) => (
-                  <div key={a.id} className="card p-5 flex flex-col items-center text-center transition-all group relative overflow-hidden hover:border-lime">
-                    <div className="w-12 h-12 rounded-full bg-limeDim flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Users size={20} className="text-lime" />
+                  <div 
+                    key={a.id} 
+                    className={`vl-card ${activeAgentId === a.id && callStatus === "active" ? "playing" : ""}`}
+                    onClick={() => handleToggleCall(a.id)}
+                  >
+                    <div className="vl-card-avatar">
+                      <Users 
+                        size={16} 
+                        className={activeAgentId === a.id && callStatus === "active" ? "text-lime animate-pulse" : ""}
+                      />
                     </div>
-                    <div className="font-bold mb-4">{a.name || "Unnamed Assistant"}</div>
-                    <div className="flex gap-2 w-full mt-auto">
-                      <button
-                        className="btn flex-1 text-2xs"
-                        onClick={() => handleToggleCall(a.id)}
-                        disabled={callStatus === "loading" || (callStatus === "active" && activeAgentId !== a.id)}
-                      >
-                        {callStatus === "loading" && activeAgentId === a.id ? (
-                          <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                          "Test Call"
-                        )}
-                      </button>
+                    <div className="vl-card-info">
+                      <div className="vl-card-name" title={a.name || "Unnamed Assistant"}>
+                        {a.name || "Unnamed Assistant"}
+                      </div>
+                      <div className="vl-card-category">AI Assistant</div>
+                      <div className="vl-card-lang">
+                        ID: {a.id.slice(0, 8)}...
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      className="vl-card-play-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleCall(a.id);
+                      }}
+                      disabled={callStatus === "loading" || (callStatus === "active" && activeAgentId !== a.id)}
+                      title="Test Call"
+                    >
+                      {callStatus === "loading" && activeAgentId === a.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : activeAgentId === a.id && callStatus === "active" ? (
+                        <PhoneOff size={14} />
+                      ) : (
+                        <Phone size={14} />
+                      )}
+                    </button>
                   </div>
                 ))}
                 {displayAgents.length === 0 && !isFetchingBases && !agentBasesError && (
-                  <div className="placeholder-pane h-20 text-2xs col-span-2">
-                    No templates yet
+                  <div className="placeholder-pane h-32 col-span-full">
+                    No templates found.
                   </div>
                 )}
               </div>
