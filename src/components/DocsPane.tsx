@@ -249,25 +249,33 @@ export default function DocsPane({
           />
         </div>
         <div className="docs-pg-sidebar-content scroll-soft">
-          {CATEGORIES.map(cat => {
-            const catEndpoints = filteredEndpoints.filter(e => e.category === cat);
-            if (catEndpoints.length === 0) return null;
-            return (
-              <div key={cat} className="docs-pg-group">
-                <div className="docs-pg-group-title">{cat}</div>
-                {catEndpoints.map(ep => (
-                  <button
-                    key={ep.id}
-                    className={`docs-pg-item ${selectedId === ep.id ? "active" : ""}`}
-                    onClick={() => setSelectedId(ep.id)}
-                  >
-                    <span className={`docs-pg-method docs-pg-method-${ep.method.toLowerCase()}`}>{ep.method}</span>
-                    <span className="docs-pg-label">{ep.title}</span>
-                  </button>
-                ))}
-              </div>
-            );
-          })}
+          <div className="docs-pg-group">
+            <div className="docs-pg-group-title">API Documentation</div>
+            {filteredEndpoints.filter(e => e.category === "Echo").map(ep => (
+              <button
+                key={ep.id}
+                className={`docs-pg-item ${selectedId === ep.id ? "active" : ""}`}
+                onClick={() => setSelectedId(ep.id)}
+              >
+                <span className={`docs-pg-method docs-pg-method-${ep.method.toLowerCase()}`}>{ep.method}</span>
+                <span className="docs-pg-label">{ep.title}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="docs-pg-group">
+            <div className="docs-pg-group-title">Test Inbound & Calls</div>
+            {filteredEndpoints.filter(e => ["Templates", "Calls"].includes(e.category)).map(ep => (
+              <button
+                key={ep.id}
+                className={`docs-pg-item ${selectedId === ep.id ? "active" : ""}`}
+                onClick={() => setSelectedId(ep.id)}
+              >
+                <span className={`docs-pg-method docs-pg-method-${ep.method.toLowerCase()}`}>{ep.method}</span>
+                <span className="docs-pg-label">{ep.title}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </aside>
 
