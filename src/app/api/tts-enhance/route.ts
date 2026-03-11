@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     let enhanced: string;
 
-    if (OPENAI_API_KEY) {
+    const callOpenAI = async (sys: string, usr: string) => {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -27,8 +27,8 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: text },
+            { role: 'system', content: sys },
+            { role: 'user', content: usr },
           ],
           temperature: 0.3,
           max_tokens: 2048,
@@ -40,7 +40,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'LLM request failed' }, { status: 502 });
       }
       const data = await res.json();
-      enhanced = data.choices?.[0]?.message?.content?.trim() ?? text;
+      return NextResponse.json({ enhanced: data.choices?.[0]?.message?.content?.trim() ?? usr });
+    };
+
+    if (OPENAI_API_KEY) {
+      return await callOpenAI(systemPrompt, text);
     } else {
       const tryFetch = async (baseUrl: string) => {
         const url = `${baseUrl.replace(/\/$/, '')}/api/chat`;
@@ -81,6 +85,13 @@ export async function POST(req: Request) {
             res = await tryFetch('http://localhost:11434');
           } catch (localErr) {
             console.error(`[tts-enhance] Local Ollama fallback also failed:`, localErr);
+            
+            // SECONDARY FALLBACK: Try OpenAI if available
+            if (process.env.OPENAI_API_KEY) {
+              console.log(`[tts-enhance] All Ollama options failed, falling back to OpenAI...`);
+              return await callOpenAI(systemPrompt, text);
+            }
+
             if (isAbort) {
               return NextResponse.json(
                 { error: `Ollama took too long (${OLLAMA_TIMEOUT_MS / 1000}s). Is the server at ${OLLAMA_BASE} (or localhost) running and is the model "${OLLAMA_MODEL}" pulled?` },
@@ -93,6 +104,11 @@ export async function POST(req: Request) {
             );
           }
         } else {
+          // If already localhost and fails, try OpenAI
+          if (process.env.OPENAI_API_KEY) {
+            console.log(`[tts-enhance] Local Ollama failed, falling back to OpenAI...`);
+            return await callOpenAI(systemPrompt, text);
+          }
           if (isAbort) {
             return NextResponse.json(
               { error: `Ollama took too long (${OLLAMA_TIMEOUT_MS / 1000}s). Is the server at ${OLLAMA_BASE} running and is the model "${OLLAMA_MODEL}" pulled?` },

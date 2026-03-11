@@ -145,6 +145,15 @@ const CATEGORIES = [...new Set(ENDPOINTS.map((e) => e.category))];
 export default function DocsPane({
   apiBaseUrl,
   onCopyFeedback,
+  isAuthenticated,
+  apiKeyName,
+  onApiKeyNameChange,
+  onCreateApiKey,
+  onRefreshApiKeys,
+  isApiKeysLoading,
+  apiKeysStatus,
+  newlyCreatedApiKey,
+  onCopyNewApiKey,
 }: DocsPaneProps) {
   const [selectedId, setSelectedId] = useState<string>("tts");
   const [codeTab, setCodeTab] = useState<"curl" | "js" | "py">("curl");
@@ -195,7 +204,7 @@ export default function DocsPane({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="docs-pg-sidebar-content">
+        <div className="docs-pg-sidebar-content scroll-soft">
           {CATEGORIES.map(cat => {
             const catEndpoints = filteredEndpoints.filter(e => e.category === cat);
             if (catEndpoints.length === 0) return null;
@@ -219,7 +228,7 @@ export default function DocsPane({
       </aside>
 
       {/* Middle: Request Params */}
-      <main className="docs-pg-request">
+      <main className="docs-pg-request scroll-soft">
         <div className="docs-pg-header">
           <div className="docs-pg-url-bar">
             <span className={`docs-pg-method-badge docs-pg-method-${selectedEndpoint.method.toLowerCase()}`}>{selectedEndpoint.method}</span>
@@ -231,26 +240,75 @@ export default function DocsPane({
             disabled={isSending}
           >
             {isSending ? <Clock size={16} className="animate-spin" /> : <Send size={16} />}
-            <span>Send request</span>
+            <span>Send</span>
           </button>
         </div>
 
         <div className="docs-pg-auth-notice">
-          <Key size={14} />
-          <span>Enter your bearer token (token)</span>
-          <button className="docs-pg-auth-edit">Edit</button>
+          <div className="docs-pg-auth-top">
+            <Key size={14} />
+            <span className="font-semibold uppercase text-[10px] tracking-wider opacity-60">Authentication</span>
+          </div>
+          
+          {newlyCreatedApiKey ? (
+            <div className="mt-2 p-3 bg-limeDim/10 border border-lime/20 rounded-lg flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-lime opacity-80 uppercase font-bold">New API Key</span>
+                <code className="text-xs text-lime font-mono break-all">{newlyCreatedApiKey}</code>
+              </div>
+              <button 
+                className="btn icon-only !w-8 !h-8 !rounded-full bg-lime/10 border-lime/20 text-lime"
+                onClick={onCopyNewApiKey}
+                title="Copy Key"
+              >
+                <Copy size={14} />
+              </button>
+            </div>
+          ) : isAuthenticated ? (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="text"
+                className="docs-pg-auth-input"
+                placeholder="Key name (e.g. My App)"
+                value={apiKeyName}
+                onChange={(e) => onApiKeyNameChange?.(e.target.value)}
+              />
+              <button 
+                className="btn primary !py-1.5 text-xs whitespace-nowrap"
+                onClick={onCreateApiKey}
+                disabled={isApiKeysLoading || !apiKeyName}
+              >
+                {isApiKeysLoading ? "..." : "Create Key"}
+              </button>
+              {onRefreshApiKeys && (
+                <button 
+                  className="btn icon-only !w-8 !h-8"
+                  onClick={onRefreshApiKeys}
+                  title="Refresh keys"
+                >
+                  <Clock size={14} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="mt-1 text-xs opacity-60">
+              Sign in to manage API keys.
+            </div>
+          )}
         </div>
 
         <div className="docs-pg-section">
-          <h3 className="docs-pg-section-title">Query parameters</h3>
+          <h3 className="docs-pg-section-title">Request Body / Params</h3>
           {selectedEndpoint.params && selectedEndpoint.params.length > 0 ? (
             <div className="docs-pg-params-box">
-              <span className="docs-pg-params-count">{selectedEndpoint.params.length} required properties</span>
+              <span className="docs-pg-params-count">{selectedEndpoint.params.length} properties</span>
               <div className="docs-pg-params-list">
                 {selectedEndpoint.params.map(p => (
                   <div key={p.name} className="docs-pg-param-item">
-                    <code className="docs-pg-param-name">{p.name}</code>
-                    <span className="docs-pg-param-type">{p.type}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <code className="docs-pg-param-name">{p.name}</code>
+                      <span className="docs-pg-param-type">{p.type} {p.required && <span className="text-bad font-bold">*</span>}</span>
+                    </div>
                     <input 
                       type="text" 
                       className="docs-pg-param-input" 
@@ -266,9 +324,9 @@ export default function DocsPane({
           )}
         </div>
 
-        <div className="docs-pg-footer">
-          <button className="docs-pg-clear">Clear form</button>
-          <a href="#" className="docs-pg-ref-link">API Reference <Maximize2 size={12} /></a>
+        <div className="docs-pg-footer mt-auto pt-6 border-t border-stroke">
+          <button className="docs-pg-clear" onClick={() => { setLastResponse(null); setLastStatus(null); }}>Clear</button>
+          <a href="#" className="docs-pg-ref-link flex items-center gap-1">Docs <Maximize2 size={12} /></a>
         </div>
       </main>
 
@@ -278,55 +336,47 @@ export default function DocsPane({
         <div className="docs-pg-panel docs-pg-code-panel">
           <div className="docs-pg-panel-header">
             <div className="docs-pg-tabs">
-              <button 
-                className={`docs-pg-tab ${codeTab === "curl" ? "active" : ""}`}
-                onClick={() => setCodeTab("curl")}
-              >
-                <Terminal size={14} /> cURL
-              </button>
-              <button 
-                className={`docs-pg-tab ${codeTab === "js" ? "active" : ""}`}
-                onClick={() => setCodeTab("js")}
-              >
-                <Code2 size={14} /> JavaScript
-              </button>
-              <button 
-                className={`docs-pg-tab ${codeTab === "py" ? "active" : ""}`}
-                onClick={() => setCodeTab("py")}
-              >
-                <FileJson size={14} /> Python
-              </button>
+              {(["curl", "js", "py"] as const).map((t) => (
+                <button 
+                  key={t}
+                  className={`docs-pg-tab ${codeTab === t ? "active" : ""}`}
+                  onClick={() => setCodeTab(t)}
+                >
+                  {t === "curl" && <Terminal size={12} />}
+                  {t === "js" && <Code2 size={12} />}
+                  {t === "py" && <FileJson size={12} />}
+                  <span className="capitalize">{t === "curl" ? "cURL" : t === "js" ? "JS" : "Python"}</span>
+                </button>
+              ))}
             </div>
-            <button className="docs-pg-copy-btn" onClick={() => copyToClipboard(selectedEndpoint.examples[codeTab](apiBaseUrl))}>
+            <button className="docs-pg-copy-btn text-faint hover:text-ink transition-colors" onClick={() => copyToClipboard(selectedEndpoint.examples[codeTab](apiBaseUrl))}>
               <Copy size={14} />
             </button>
           </div>
-          <div className="docs-pg-panel-content">
-            <pre><code>{selectedEndpoint.examples[codeTab](apiBaseUrl)}</code></pre>
+          <div className="docs-pg-panel-content scroll-soft">
+            <pre className="text-[11px] leading-relaxed"><code>{selectedEndpoint.examples[codeTab](apiBaseUrl)}</code></pre>
           </div>
         </div>
 
         {/* Response Block */}
-        <div className="docs-pg-panel docs-pg-response-panel">
+        <div className="docs-pg-panel docs-pg-response-panel border-t border-stroke">
           <div className="docs-pg-panel-header">
-            <span className="docs-pg-panel-title">RESPONSE</span>
+            <span className="docs-pg-panel-title text-[10px] font-bold tracking-widest opacity-60">RESPONSE</span>
             {lastStatus && (
               <div className="docs-pg-response-meta">
-                <span className="text-ok flex items-center gap-1"><CheckCircle2 size={12} /> {lastStatus}</span>
+                <span className="text-ok flex items-center gap-1 font-bold"><CheckCircle2 size={12} /> {lastStatus}</span>
                 <span className="text-faint">·</span>
                 <span className="text-faint">{latency}ms</span>
               </div>
             )}
           </div>
-          <div className="docs-pg-panel-content docs-pg-response-content">
+          <div className="docs-pg-panel-content docs-pg-response-content scroll-soft">
             {lastResponse ? (
-              <pre><code>{JSON.stringify(lastResponse, null, 2)}</code></pre>
+              <pre className="text-[11px] text-ok/80 leading-relaxed"><code>{JSON.stringify(lastResponse, null, 2)}</code></pre>
             ) : (
-              <div className="docs-pg-response-placeholder">
-                <Send size={32} className="mb-4 opacity-20" />
-                <button className="btn primary px-8" onClick={handleSendRequest} disabled={isSending}>
-                  Send request
-                </button>
+              <div className="docs-pg-response-placeholder opacity-40 grayscale flex flex-col items-center gap-3">
+                <Send size={24} />
+                <span className="text-xs uppercase tracking-widest font-semibold">Ready to test</span>
               </div>
             )}
           </div>

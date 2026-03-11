@@ -108,7 +108,7 @@ export async function POST(req: Request) {
 
     let raw: string;
 
-    if (OPENAI_API_KEY) {
+    const callOpenAI = async (prompt: string, isStream: boolean) => {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'user', content: replacePrompt },
+            { role: 'user', content: prompt },
           ],
           temperature: 0.2,
           max_tokens: 2048,
@@ -130,7 +130,37 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'AI request failed' }, { status: 502 });
       }
       const data = await res.json();
-      raw = data.choices?.[0]?.message?.content?.trim() ?? '';
+      const rawRes = data.choices?.[0]?.message?.content?.trim() ?? '';
+      
+      // Parse JSON (strip markdown code blocks if present)
+      const cleaned = rawRes.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+      const parsed = JSON.parse(cleaned) as { name?: string; firstMessage?: string; systemPrompt?: string };
+
+      const name = typeof parsed.name === 'string' ? parsed.name.trim() : 'My Agent';
+      const firstMessage = typeof parsed.firstMessage === 'string' ? parsed.firstMessage.trim() : 'Hi! How can I help you today?';
+      const agentSystemPrompt = typeof parsed.systemPrompt === 'string' ? parsed.systemPrompt.trim() : 'You are a helpful AI assistant.';
+
+      if (isStream) {
+        const encoder = new TextEncoder();
+        const streamBody = new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(JSON.stringify({ type: 'name', value: name }) + '\n'));
+            controller.enqueue(encoder.encode(JSON.stringify({ type: 'firstMessage', value: firstMessage }) + '\n'));
+            controller.enqueue(encoder.encode(JSON.stringify({ type: 'systemPrompt', value: agentSystemPrompt }) + '\n'));
+            controller.enqueue(encoder.encode(JSON.stringify({ type: 'done', name, firstMessage, systemPrompt: agentSystemPrompt }) + '\n'));
+            controller.close();
+          },
+        });
+        return new Response(streamBody, {
+          headers: { 'Content-Type': 'application/x-ndjson' },
+        });
+      }
+
+      return NextResponse.json({ name, firstMessage, systemPrompt: agentSystemPrompt });
+    };
+
+    if (OPENAI_API_KEY) {
+      return await callOpenAI(replacePrompt, stream);
     } else {
       const tryFetch = async (baseUrl: string) => {
         const url = `${baseUrl.replace(/\/$/, '')}/api/chat`;
@@ -170,6 +200,13 @@ export async function POST(req: Request) {
             res = await tryFetch('http://localhost:11434');
           } catch (localErr) {
             console.error(`[agent-from-voice] Local Ollama fallback also failed:`, localErr);
+            
+            // SECONDARY FALLBACK: Try OpenAI if available
+            if (process.env.OPENAI_API_KEY) {
+              console.log(`[agent-from-voice] All Ollama options failed, falling back to OpenAI...`);
+              return await callOpenAI(replacePrompt, stream);
+            }
+
             if (isAbort) {
               return NextResponse.json(
                 { error: `Ollama timed out after ${OLLAMA_TIMEOUT_MS / 1000}s. Try increasing OLLAMA_TIMEOUT_SECONDS in .env, or use a smaller/faster model.` },
@@ -182,6 +219,11 @@ export async function POST(req: Request) {
             );
           }
         } else {
+          // If already localhost and fails, try OpenAI
+          if (process.env.OPENAI_API_KEY) {
+            console.log(`[agent-from-voice] Local Ollama failed, falling back to OpenAI...`);
+            return await callOpenAI(replacePrompt, stream);
+          }
           if (isAbort) {
             return NextResponse.json(
               { error: `Ollama timed out after ${OLLAMA_TIMEOUT_MS / 1000}s. Try increasing OLLAMA_TIMEOUT_SECONDS in .env, or use a smaller/faster model.` },
