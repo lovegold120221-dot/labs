@@ -210,7 +210,7 @@ export default function DocsPane({
   const [codeTab, setCodeTab] = useState<"curl" | "js" | "py">("curl");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [lastResponse, setLastResponse] = useState<Record<string, unknown> | null>(null);
+  const [lastResponse, setLastResponse] = useState<unknown>(null);
   const [lastStatus, setLastStatus] = useState<string | null>(null);
   const [latency, setLatency] = useState<number | null>(null);
 
