@@ -2797,6 +2797,23 @@ body.light-mode .call-log-transcript-toolbar .btn {
   color: #000;
   border-color: var(--lime);
 }
+.vl-card-edit-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.vl-card-edit-btn:hover {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
 .vl-card-audio {
   display: none;
 }

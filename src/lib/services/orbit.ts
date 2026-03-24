@@ -88,6 +88,30 @@ export async function createQueryTool(params: {
   return { id: data.id };
 }
 
+export type VapiVoice = {
+  voice_id: string;
+  name: string;
+  provider?: string;
+  labels?: Record<string, string>;
+  description?: string;
+  preview_url?: string;
+  category?: string;
+  [key: string]: unknown;
+};
+
+export async function fetchVoices(): Promise<VapiVoice[]> {
+  if (!getOrbitSecret()) return [];
+  const raw = await orbitCoreRequest('GET', '/voice');
+  if (Array.isArray(raw)) return raw as VapiVoice[];
+  if (raw && typeof raw === 'object' && Array.isArray((raw as { voices?: unknown[] }).voices)) {
+    return (raw as { voices: VapiVoice[] }).voices;
+  }
+  if (raw && typeof raw === 'object' && Array.isArray((raw as { data?: unknown[] }).data)) {
+    return (raw as { data: VapiVoice[] }).data;
+  }
+  return [];
+}
+
 export async function fetchAssistants() {
   // Keep the dashboard usable when Orbit is not configured.
   if (!getOrbitSecret()) return [];

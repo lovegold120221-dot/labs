@@ -91,6 +91,8 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const IVAN_ID = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_IVAN_ID;
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 
 /** Fetch ivan-eburon template agent from VAPI */
 async function getIvanTemplate(): Promise<{ name: string; firstMessage: string; systemPrompt: string } | null> {
@@ -235,8 +237,58 @@ export async function POST(req: Request) {
       return data.choices?.[0]?.message?.content?.trim() ?? '';
     };
 
-    // PRIMARY: Gemini
-    if (GEMINI_API_KEY) {
+    const callOllama = async (prompt: string) => {
+      if (!OLLAMA_BASE_URL) throw new Error('Ollama not configured');
+      const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          prompt,
+          stream: false,
+          options: {
+            temperature: 0.2,
+            num_predict: 2048,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('[agent-from-voice] Ollama error:', res.status, err);
+        throw new Error(`Ollama failed: ${res.status}`);
+      }
+      const data = await res.json();
+      return (data.response || '').trim();
+    };
+
+    // PRIMARY: Ollama (cloud or local)
+    if (OLLAMA_BASE_URL) {
+      try {
+        raw = await callOllama(structuredPrompt || replacePrompt);
+      } catch (ollamaErr) {
+        console.warn('[agent-from-voice] Ollama failed, attempting Gemini...', ollamaErr);
+        // SECONDARY: Gemini
+        if (GEMINI_API_KEY) {
+          try {
+            raw = await callGemini(structuredPrompt, userRequest);
+          } catch (geminiErr) {
+            console.warn('[agent-from-voice] Gemini failed, attempting OpenAI fallback...', geminiErr);
+            // TERTIARY: OpenAI
+            if (OPENAI_API_KEY) {
+              raw = await callOpenAI(structuredPrompt || replacePrompt);
+            } else {
+              throw geminiErr;
+            }
+          }
+        } else if (OPENAI_API_KEY) {
+          raw = await callOpenAI(structuredPrompt || replacePrompt);
+        } else {
+          throw ollamaErr;
+        }
+      }
+    }
+    // SECONDARY: Gemini
+    else if (GEMINI_API_KEY) {
       try {
         raw = await callGemini(structuredPrompt, userRequest);
       } catch (geminiErr) {
@@ -248,7 +300,7 @@ export async function POST(req: Request) {
         }
       }
     }
-    // SECONDARY: OpenAI
+    // TERTIARY: OpenAI
     else if (OPENAI_API_KEY) {
       raw = await callOpenAI(replacePrompt);
     } else {

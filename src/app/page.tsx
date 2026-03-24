@@ -23,7 +23,8 @@ import {
   Database,
   X,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Pencil
 } from "lucide-react";
 
 import OrbitCore from "@vapi-ai/web";
@@ -570,16 +571,20 @@ export default function Dashboard() {
   const userId = user?.id ?? null;
 
   const loadVoicesAndModels = useCallback(async () => {
-    try {
-      const res = await authedFetch("/api/echo/voices");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setVoices(data);
-        if (data.length > 0) setSelectedVoice(data[0].voice_id);
-      }
-    } catch (error) {
-      console.error("Failed to fetch voices:", error);
-    }
+    const [vapiVoices, echoVoices] = await Promise.all([
+      authedFetch("/api/orbit/voices").then(r => r.json()).catch(() => []),
+      authedFetch("/api/echo/voices").then(r => r.json()).catch(() => []),
+    ]);
+
+    const mergedVoices = [...(Array.isArray(vapiVoices) ? vapiVoices : []), ...(Array.isArray(echoVoices) ? echoVoices : [])];
+    const seen = new Set<string>();
+    const uniqueVoices = mergedVoices.filter((v: { voice_id?: string }) => {
+      if (!v.voice_id || seen.has(v.voice_id)) return false;
+      seen.add(v.voice_id);
+      return true;
+    });
+    setVoices(uniqueVoices);
+    if (uniqueVoices.length > 0 && !selectedVoice) setSelectedVoice(uniqueVoices[0].voice_id);
 
     try {
       const res = await authedFetch("/api/echo/models");
@@ -588,7 +593,7 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Failed to fetch models:", error);
     }
-  }, [authedFetch]);
+  }, [authedFetch, selectedVoice]);
 
   useEffect(() => {
     if (!userId) return;
@@ -945,8 +950,9 @@ export default function Dashboard() {
     }
   };
 
-  const [agentBases, setAgentBases] = useState<{ id: string; name?: string }[]>([]);
+  const [agentBases, setAgentBases] = useState<{ id: string; name?: string; userId?: string }[]>([]);
   const [agentBasesError, setAgentBasesError] = useState<string | null>(null);
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [isFetchingBases, setIsFetchingBases] = useState(false);
   const [userAssistantId, setUserAssistantId] = useState<string | null>(null);
   const [newAgentName, setNewAgentName] = useState(DEFAULT_AGENT_NAME);
@@ -1220,7 +1226,7 @@ export default function Dashboard() {
   // Always include default sample agent first, then fetched agents (no duplicate id)
   const displayAgents = useMemo(() => {
     const seen = new Set<string>();
-    const out: { id: string; name?: string }[] = [{ ...DEFAULT_SAMPLE_AGENT }];
+    const out: { id: string; name?: string; userId?: string }[] = [{ ...DEFAULT_SAMPLE_AGENT }];
     seen.add(DEFAULT_SAMPLE_AGENT.id);
     agentBases.forEach((a) => {
       if (!seen.has(a.id)) {
@@ -1236,6 +1242,8 @@ export default function Dashboard() {
   const handleEditAgain = useCallback(() => {
     setAgentStatus("");
     setAgentKnowledgeFiles([]);
+    setEditingAgentId(null);
+    setUserAssistantId(null);
     loadAgentFormDefaults();
   }, [loadAgentFormDefaults]);
 
@@ -1636,6 +1644,37 @@ export default function Dashboard() {
     } catch (error) {
       console.error(error);
       setAgentStatus("Error: " + (error instanceof Error ? error.message : (isUpdate ? "Update failed." : "Creation failed.")));
+    } finally {
+      setIsCreatingAgent(false);
+    }
+  };
+
+  const handleEditAgent = async (agentId: string) => {
+    if (!user) return;
+    setIsCreatingAgent(true);
+    try {
+      const res = await authedFetch(`/api/orbit/assistants/${agentId}`, { cache: "no-store" });
+      const detail = await res.json();
+      if (!res.ok || !detail?.id) throw new Error(detail?.error || "Failed to load agent");
+      setNewAgentName(detail.name || "");
+      setAgentIntroSpiel(detail.firstMessage || "");
+      const sysMsg = detail.model?.messages?.find((m: { role?: string }) => m.role === "system");
+      setAgentSkillsPrompt(sysMsg?.content || "");
+      const lang = detail.transcriber?.language;
+      setAgentLanguage(lang === "multi" ? "multilingual" : lang || "multilingual");
+      const v = detail.voice;
+      if (v?.provider && v?.voiceId) {
+        setAgentVoice(`${v.provider}:${v.voiceId}`);
+      } else {
+        setAgentVoice("vapi:Elliot");
+      }
+      setUserAssistantId(agentId);
+      setEditingAgentId(agentId);
+      setActiveTab("pane-Create");
+      setAgentKnowledgeFiles([]);
+    } catch (err) {
+      console.error(err);
+      setAgentStatus("Error: " + (err instanceof Error ? err.message : "Failed to load agent"));
     } finally {
       setIsCreatingAgent(false);
     }
@@ -2807,7 +2846,7 @@ export default function Dashboard() {
 
                   {/* Create Agent Form */}
                   <div ref={createFormRef} className="create-agent-form Create-create-card">
-                    <h3 className="create-agent-title">Create My Agent</h3>
+                    <h3 className="create-agent-title">{editingAgentId ? "Edit Agent" : "Create My Agent"}</h3>
                     <div className="field">
                       <label>Agent Name</label>
                       <input
@@ -2829,17 +2868,6 @@ export default function Dashboard() {
                           <option value="vapi:Nico">Nico</option>
                           <option value="vapi:Elliot">Elliot</option>
                           <option value="vapi:Savannah">Savannah</option>
-                        </optgroup>
-                        <optgroup label="Custom / Cloned">
-                          {voices.length === 0 ? (
-                            <option value="11labs:EXAVITQu4vr4xnSDxMaL" disabled>Loading voices…</option>
-                          ) : (
-                            voices.map((v) => (
-                              <option key={v.voice_id} value={`11labs:${v.voice_id}`}>
-                                {v.name}{v.labels?.cloned === "true" ? " (cloned)" : ""}
-                              </option>
-                            ))
-                          )}
                         </optgroup>
                       </select>
                     </div>
@@ -2910,7 +2938,7 @@ export default function Dashboard() {
                         disabled={isCreatingAgent || !newAgentName.trim()}
                       >
                         {isCreatingAgent ? <Loader2 size={16} className="animate-spin" /> : <Users size={16} />}
-                        Use this agent
+                        {editingAgentId ? "Save changes" : "Use this agent"}
                       </button>
                       <button
                         className="btn"
@@ -3012,6 +3040,19 @@ export default function Dashboard() {
                         <Phone size={14} />
                       )}
                     </button>
+                    {user?.id === a.userId && (
+                      <button
+                        type="button"
+                        className="vl-card-edit-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditAgent(a.id);
+                        }}
+                        title="Edit Agent"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
                   </div>
                 ))}
                 {displayAgents.length === 0 && !isFetchingBases && !agentBasesError && (
