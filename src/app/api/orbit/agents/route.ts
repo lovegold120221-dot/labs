@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     );
 
     // Update existing assistant when assistantId is provided
-    if (body.assistantId && body.name && (body.systemPrompt || body.firstMessage)) {
+    if (body.assistantId && body.name) {
       const voice = body.voice
         ? { provider: body.voice.provider || '11labs', voiceId: body.voice.voiceId }
         : undefined;
@@ -58,6 +58,7 @@ export async function POST(req: Request) {
       const result = await updateAssistant(body.assistantId, {
         name: body.name,
         firstMessage: body.firstMessage || undefined,
+        firstMessageMode: body.firstMessageMode || undefined,
         model: buildAssistantModelConfig(systemPrompt, mergedToolIds),
         ...(voice && { voice: buildAssistantVoiceConfig(voice) }),
         ...(body.language !== undefined && {
@@ -67,10 +68,11 @@ export async function POST(req: Request) {
       return NextResponse.json(result);
     }
     // Create from scratch when assistantId is not provided
-    if (!body.assistantId && body.name && (body.systemPrompt || body.firstMessage)) {
+    if (!body.assistantId && body.name) {
       const result = await createAssistantFromScratch({
         name: body.name,
         firstMessage: body.firstMessage || '',
+        firstMessageMode: body.firstMessageMode,
         systemPrompt,
         language: body.language,
         voice: body.voice,
