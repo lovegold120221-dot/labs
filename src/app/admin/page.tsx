@@ -305,10 +305,6 @@ type KnowledgeFile = {
   vapiFileId: string;
 };
 
-function sanitizeProviderBranding(message: string) {
-  return message.replace(/elevenlabs|11labs|vapi/gi, "Eburon AI");
-}
-
 const DEFAULT_PHONE_OPTIONS: PhoneOption[] = [
   { id: "b05646d2-9c25-45fc-8862-b2203544afd2", number: "+1 (844) 756 0329", name: "Default US" },
   { id: "31272481-96ff-4c24-82c8-1f5f655c3a7f", number: "+1 (844) 935 0977", name: "Default US 2" },
