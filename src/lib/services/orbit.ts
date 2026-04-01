@@ -101,25 +101,28 @@ export type VapiVoice = {
 
 export async function fetchVoices(): Promise<VapiVoice[]> {
   if (!getOrbitSecret()) return [];
-  // Fetch all voices from the voice library (includes VAPI, 11labs, and other providers)
-  const raw = await orbitCoreRequest('GET', '/voice-library');
-  if (Array.isArray(raw)) {
-    // Filter out deleted voices and map to expected format
-    return raw
-      .filter((voice: any) => !voice.isDeleted)
-      .map((voice: any) => ({
-        voice_id: voice.providerId,
-        name: voice.name,
-        provider: voice.provider,
-        description: voice.description,
-        preview_url: voice.previewUrl,
-        category: voice.gender || 'default',
-        labels: {
-          gender: voice.gender || '',
-          accent: voice.accent || '',
-          language: voice.accent || '',
-        },
-      }));
+  // Fetch voices from VAPI - try the correct endpoint
+  try {
+    const raw = await orbitCoreRequest('GET', '/voice');
+    if (Array.isArray(raw)) {
+      return raw
+        .filter((voice: Record<string, unknown>) => !voice.deletedAt)
+        .map((voice: Record<string, unknown>) => ({
+          voice_id: (voice.id || voice.providerId) as string,
+          name: (voice.name || 'Unknown') as string,
+          provider: voice.provider as string,
+          description: voice.description as string,
+          preview_url: voice.previewUrl as string,
+          category: (voice.gender || 'default') as string,
+          labels: {
+            gender: (voice.gender || '') as string,
+            accent: (voice.accent || '') as string,
+            language: (voice.language || voice.accent || '') as string,
+          },
+        }));
+    }
+  } catch (err) {
+    console.error('[fetchVoices] Error:', err);
   }
   return [];
 }

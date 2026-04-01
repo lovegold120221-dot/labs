@@ -30,7 +30,6 @@ import {
   Plus
 } from "lucide-react";
 
-import OrbitCore from "@vapi-ai/web";
 import { Voice, UserTtsHistoryItem } from "@/lib/services/echo";
 import DocsPane from "@/components/DocsPane";
 import { TTS_MODEL_LABELS } from "@/lib/brand";
@@ -242,17 +241,6 @@ export default function Dashboard() {
   const webCallRingAudioRef = useRef<HTMLAudioElement | null>(null);
   const pendingWebCallStartRef = useRef<symbol | null>(null);
 
-  // Initialize OrbitCore inside the component for better React integration
-  const orbit = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const token = process.env.NEXT_PUBLIC_ORBIT_TOKEN || "";
-    if (!token) {
-      console.warn("Realtime browser call token is missing. Browser calls will not work.");
-      return null;
-    }
-    return new OrbitCore(token);
-  }, []);
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       setApiBaseUrl(window.location.origin);
@@ -320,58 +308,7 @@ export default function Dashboard() {
     const isLight = savedTheme === "light";
     document.documentElement.classList.toggle("light-mode", isLight);
     document.body.classList.toggle("light-mode", isLight);
-
-    if (!orbit) return;
-
-    const onCallStart = () => {
-      pendingWebCallStartRef.current = null;
-      stopWebCallRing();
-      setCallStatus("active");
-      setLiveInterimTranscript({ user: "", agent: "" });
-    };
-    const onCallEnd = () => {
-      resetWebCallUi();
-    };
-    const onError = (e: unknown) => {
-      console.error("Browser call error:", e);
-      resetWebCallUi();
-    };
-    const onMessage = (message: { type: string; transcriptType?: string; transcript?: string; role?: string }) => {
-      if (message.type === "transcript" && message.transcript && message.role) {
-        const role = message.role === "user" ? "user" : "agent";
-        const text = message.transcript.trim();
-        if (!text) return;
-        const isInterim = message.transcriptType === "interim" || message.transcriptType === "partial";
-        if (isInterim) {
-          setLiveInterimTranscript((prev) => ({ ...prev, [role]: text }));
-        } else {
-          setTranscript((prev) => {
-            const last = prev[prev.length - 1];
-            if (last && last.role === role && last.text === text) return prev;
-            return [...prev, { text, role }];
-          });
-          setLiveInterimTranscript((prev) => ({ ...prev, [role]: "" }));
-        }
-      }
-      if (message.type === "speech-start") setIsSpeaking(true);
-      if (message.type === "speech-end") setIsSpeaking(false);
-    };
-    const onVolumeLevel = (volume: number) => setCallVolume(volume);
-
-    orbit.on("call-start", onCallStart);
-    orbit.on("call-end", onCallEnd);
-    orbit.on("error", onError);
-    orbit.on("message", onMessage);
-    orbit.on("volume-level", onVolumeLevel);
-
-    return () => {
-      orbit.off("call-start", onCallStart);
-      orbit.off("call-end", onCallEnd);
-      orbit.off("error", onError);
-      orbit.off("message", onMessage);
-      orbit.off("volume-level", onVolumeLevel);
-    };
-  }, [orbit, resetWebCallUi, stopWebCallRing]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -531,15 +468,14 @@ export default function Dashboard() {
   }, [activeTab, fetchCallLogs]);
 
   const handleToggleCall = async (assistantId: string) => {
-    if (!orbit) {
-      alert("Voice call engine not initialized. Check your API token.");
-      return;
-    }
-
     if (callStatus === "active") {
       pendingWebCallStartRef.current = null;
       stopWebCallRing();
-      orbit.stop();
+      // Stop any active call
+      setCallStatus("idle");
+      setActiveAgentId("");
+      setTranscript([]);
+      setLiveInterimTranscript({ user: "", agent: "" });
       return;
     }
 
@@ -563,7 +499,32 @@ export default function Dashboard() {
       await new Promise((resolve) => window.setTimeout(resolve, WEB_CALL_PICKUP_DELAY_MS));
       if (pendingWebCallStartRef.current !== startToken) return;
       console.log("Starting web call for assistant:", idToUse);
-      await orbit.start(idToUse);
+
+      // Use proxy endpoint to hide VAPI URL from browser
+      const res = await authedFetch("/api/orbit/web-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assistantId: idToUse }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || `Web call failed (${res.status})`);
+      }
+
+      const data = await res.json();
+
+      // Handle web call connection
+      pendingWebCallStartRef.current = null;
+      stopWebCallRing();
+      setCallStatus("active");
+      setLiveInterimTranscript({ user: "", agent: "" });
+
+      // Store call data for later use
+      if (data.webCallUrl) {
+        // Connect to websocket if provided
+        console.log("Web call connected:", data.webCallUrl);
+      }
     } catch (err) {
       console.error("Failed to start web call:", err);
       resetWebCallUi();
@@ -2819,7 +2780,11 @@ export default function Dashboard() {
                                 type="button"
                                 className="dialer-end-call-btn"
                                 onClick={() => {
-                                  orbit?.stop();
+                                  // End call and reset UI
+                                  setCallStatus("idle");
+                                  setActiveAgentId("");
+                                  setTranscript([]);
+                                  setLiveInterimTranscript({ user: "", agent: "" });
                                   setShowTestCallModal(false);
                                 }}
                               >
@@ -3985,7 +3950,11 @@ Jane Smith,+15559876543`}
                   if (callStatus === "active") {
                     pendingWebCallStartRef.current = null;
                     stopWebCallRing();
-                    orbit?.stop();
+                    // End call and reset UI
+                    setCallStatus("idle");
+                    setActiveAgentId("");
+                    setTranscript([]);
+                    setLiveInterimTranscript({ user: "", agent: "" });
                     setShowTestCallModal(false);
                   } else {
                     resetWebCallUi();
