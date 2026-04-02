@@ -13,6 +13,7 @@ import {
   Phone,
   PhoneOff,
   X,
+  PhoneCall,
 } from "lucide-react";
 import OrbitCore from "@vapi-ai/web";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +37,14 @@ type PhoneOption = {
   id: string;
   number?: string;
   name?: string;
+};
+
+type PhoneWithAgent = {
+  id: string;
+  number: string;
+  name: string;
+  assistantId: string | null;
+  assistantName: string | null;
 };
 
 type KnowledgeFile = {
@@ -62,6 +71,10 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isNew, setIsNew] = useState(false);
+
+  const [sidebarTab, setSidebarTab] = useState<"agents" | "phones">("agents");
+  const [phonesWithAgents, setPhonesWithAgents] = useState<PhoneWithAgent[]>([]);
+  const [isLoadingPhones, setIsLoadingPhones] = useState(false);
 
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
@@ -182,6 +195,42 @@ export default function AdminPage() {
     }
   }, [authedFetch]);
 
+  const loadPhonesWithAgents = useCallback(async () => {
+    setIsLoadingPhones(true);
+    try {
+      const phoneRes = await authedFetch("/api/orbit/phone-numbers", { cache: "no-store" });
+      const phoneData = await phoneRes.json();
+      const phoneList: PhoneOption[] = Array.isArray(phoneData) 
+        ? [...DEFAULT_PHONE_OPTIONS, ...phoneData].filter((pn: PhoneOption) => pn && typeof pn.id === "string")
+        : DEFAULT_PHONE_OPTIONS;
+
+      const agentRes = await authedFetch("/api/orbit/assistants", { cache: "no-store" });
+      const agentData = await agentRes.json();
+      const agentList: Agent[] = Array.isArray(agentData) ? agentData : [];
+
+      const phoneAgentMap: Record<string, string | null> = {};
+      agentList.forEach((a) => {
+        if (a.phoneNumberId) {
+          phoneAgentMap[a.phoneNumberId] = a.name || a.id;
+        }
+      });
+
+      const phonesWithAgentList: PhoneWithAgent[] = phoneList.map((pn) => ({
+        id: pn.id,
+        number: pn.number || "",
+        name: pn.name || pn.id,
+        assistantId: phoneAgentMap[pn.id] ? agentList.find((a) => a.phoneNumberId === pn.id)?.id || null : null,
+        assistantName: phoneAgentMap[pn.id] || null,
+      }));
+
+      setPhonesWithAgents(phonesWithAgentList);
+    } catch {
+      setPhonesWithAgents([]);
+    } finally {
+      setIsLoadingPhones(false);
+    }
+  }, [authedFetch]);
+
   const loadDeployedAssistant = useCallback(async () => {
     try {
       const res = await authedFetch("/api/user-assistant", { cache: "no-store" });
@@ -220,6 +269,12 @@ export default function AdminPage() {
     loadPhoneNumbers();
     loadDeployedAssistant();
   }, [loadAgents, loadVoices, loadPhoneNumbers, loadDeployedAssistant]);
+
+  useEffect(() => {
+    if (sidebarTab === "phones") {
+      loadPhonesWithAgents();
+    }
+  }, [sidebarTab, loadPhonesWithAgents]);
 
   useEffect(() => {
     loadKnowledgeFiles(!isNew && selectedId ? selectedId : null);
@@ -570,57 +625,119 @@ export default function AdminPage() {
             <div className="brand-icon" />
             EBURON AI
           </div>
+          <div className="sidebar-tabs">
+            <button
+              className={`sidebar-tab ${sidebarTab === "agents" ? "active" : ""}`}
+              onClick={() => setSidebarTab("agents")}
+            >
+              <Bot size={14} /> Agents
+            </button>
+            <button
+              className={`sidebar-tab ${sidebarTab === "phones" ? "active" : ""}`}
+              onClick={() => setSidebarTab("phones")}
+            >
+              <PhoneCall size={14} /> Phones
+            </button>
+          </div>
           <div className="search-wrap">
             <Search size={16} className="search-icon" />
             <input
               type="text"
               className="search-box"
-              placeholder="Search agents..."
+              placeholder={sidebarTab === "agents" ? "Search agents..." : "Search phones..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        <div className="agent-list">
-          {isLoading ? (
-            <div className="list-empty">
-              <Loader2 size={20} className="animate-spin" />
-              <span>Loading...</span>
+        {sidebarTab === "agents" && (
+          <>
+            <div className="agent-list">
+              {isLoading ? (
+                <div className="list-empty">
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Loading...</span>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="list-empty">No agents found</div>
+              ) : (
+                filtered.map((a) => (
+                  <div
+                    key={a.id}
+                    className={`agent-item ${!isNew && selectedId === a.id ? "active" : ""}`}
+                    onClick={() => {
+                      setIsNew(false);
+                      setSelectedId(a.id);
+                    }}
+                  >
+                    <div className="agent-avatar">
+                      <Bot size={16} />
+                    </div>
+                    <div className="agent-meta-mini">
+                      <h4>{a.name || "Unnamed Agent"}</h4>
+                      <p>{a.transcriber?.language || "multi"} • {a.id.slice(0, 8)}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="list-empty">No agents found</div>
-          ) : (
-            filtered.map((a) => (
-              <div
-                key={a.id}
-                className={`agent-item ${!isNew && selectedId === a.id ? "active" : ""}`}
-                onClick={() => {
-                  setIsNew(false);
-                  setSelectedId(a.id);
-                }}
-              >
-                <div className="agent-avatar">
-                  <Bot size={16} />
-                </div>
-                <div className="agent-meta-mini">
-                  <h4>{a.name || "Unnamed Agent"}</h4>
-                  <p>{a.transcriber?.language || "multi"} • {a.id.slice(0, 8)}</p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
 
-        <div className="sidebar-footer">
-          <button className="btn-add-new" onClick={createNewAgent}>
-            <Plus size={14} /> Create New Agent
-          </button>
-          <div className="status-row">
-            <div className="status-dot" />
-            System Active & Connected
-          </div>
-        </div>
+            <div className="sidebar-footer">
+              <button className="btn-add-new" onClick={createNewAgent}>
+                <Plus size={14} /> Create New Agent
+              </button>
+              <div className="status-row">
+                <div className="status-dot" />
+                System Active & Connected
+              </div>
+            </div>
+          </>
+        )}
+
+        {sidebarTab === "phones" && (
+          <>
+            <div className="agent-list">
+              {isLoadingPhones ? (
+                <div className="list-empty">
+                  <Loader2 size={20} className="animate-spin" />
+                  <span>Loading...</span>
+                </div>
+              ) : phonesWithAgents.length === 0 ? (
+                <div className="list-empty">No phone numbers found</div>
+              ) : (
+                phonesWithAgents.map((pn) => (
+                  <div
+                    key={pn.id}
+                    className={`agent-item ${pn.assistantId === selectedId ? "active" : ""}`}
+                    onClick={() => {
+                      if (pn.assistantId) {
+                        setIsNew(false);
+                        setSelectedId(pn.assistantId);
+                        setSidebarTab("agents");
+                      }
+                    }}
+                  >
+                    <div className="agent-avatar">
+                      <PhoneCall size={16} />
+                    </div>
+                    <div className="agent-meta-mini">
+                      <h4>{pn.number}</h4>
+                      <p>{pn.assistantName || "Unassigned"}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="sidebar-footer">
+              <div className="status-row">
+                <div className="status-dot" />
+                {phonesWithAgents.length} phone number(s)
+              </div>
+            </div>
+          </>
+        )}
       </aside>
 
       <main className="main-panel">
@@ -889,6 +1006,37 @@ export default function AdminPage() {
           gap: 12px;
         }
         .brand-icon { width: 12px; height: 24px; background: var(--accent-green); border-radius: 4px; }
+        .sidebar-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 15px;
+          margin-top: 10px;
+        }
+        .sidebar-tab {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 10px 12px;
+          border-radius: var(--radius-md);
+          background: var(--input-bg);
+          border: 1px solid var(--border);
+          color: var(--text-gray);
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: 0.2s;
+        }
+        .sidebar-tab:hover {
+          background: rgba(255,255,255,0.05);
+          color: white;
+        }
+        .sidebar-tab.active {
+          background: rgba(191,255,0,0.15);
+          border-color: rgba(191,255,0,0.3);
+          color: var(--accent-green);
+        }
         .search-wrap { position: relative; }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-gray); }
         .search-box {

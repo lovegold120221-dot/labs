@@ -63,6 +63,36 @@ export async function uploadFile(file: Blob, filename?: string): Promise<{ id: s
   return { id: data.id };
 }
 
+/** Create a function tool that calls a custom API endpoint. */
+export async function createFunctionTool(params: {
+  name: string;
+  description: string;
+  endpoint: string;
+  method?: string;
+}): Promise<{ id: string }> {
+  const { name, description, endpoint, method = 'POST' } = params;
+  console.log('[createFunctionTool] Creating tool:', name, '->', endpoint);
+  const payload = {
+    type: 'function',
+    function: {
+      name: name.replace(/\s+/g, '-').toLowerCase(),
+      description,
+    },
+    server: {
+      url: endpoint,
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+  };
+  console.log('[createFunctionTool] Payload:', JSON.stringify(payload, null, 2));
+  const data = (await orbitCoreRequest('POST', '/tool', payload)) as { id?: string };
+  console.log('[createFunctionTool] Response:', data);
+  if (!data?.id) throw new Error('No tool ID returned from the assistant platform');
+  return { id: data.id };
+}
+
 /** Create a query tool with knowledge base files. Returns tool id. */
 export async function createQueryTool(params: {
   name: string;
@@ -71,6 +101,7 @@ export async function createQueryTool(params: {
 }): Promise<{ id: string }> {
   const { name, description, fileIds } = params;
   if (fileIds.length === 0) throw new Error('At least one file ID required');
+  console.log('[createQueryTool] Creating tool with fileIds:', fileIds);
   const payload = {
     type: 'query',
     function: { name: name.replace(/\s+/g, '-').toLowerCase() || 'knowledge-search' },
@@ -83,7 +114,9 @@ export async function createQueryTool(params: {
       },
     ],
   };
+  console.log('[createQueryTool] Payload:', JSON.stringify(payload, null, 2));
   const data = (await orbitCoreRequest('POST', '/tool', payload)) as { id?: string };
+  console.log('[createQueryTool] Response:', data);
   if (!data?.id) throw new Error('No tool ID returned from the assistant platform');
   return { id: data.id };
 }

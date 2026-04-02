@@ -3041,6 +3041,159 @@ body.light-mode .call-log-transcript-toolbar .btn {
   color: #98ff3f;
 }
 
+/* Two-panel call modal */
+.call-modal-two-panel {
+  display: flex;
+  width: 900px;
+  max-width: 95vw;
+  height: 550px;
+  background: #0f0f0f;
+  border: 1px solid rgba(74, 222, 128, 0.15);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.call-modal-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 40px;
+  background: radial-gradient(circle at center, rgba(34, 197, 94, 0.05) 0%, transparent 70%);
+}
+
+.call-modal-right {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  padding: 30px;
+}
+
+.orb-wrapper-modal {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 40px;
+}
+
+.orb-modal {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 30%, #a3e635, #22c55e);
+  border-radius: 50%;
+  box-shadow: 0 0 40px rgba(34, 197, 94, 0.4);
+  animation: pulse 3s infinite ease-in-out;
+}
+
+.orb-modal.active {
+  animation: pulse 1.5s infinite alternate;
+  box-shadow: 0 0 60px rgba(34, 197, 94, 0.6);
+}
+
+.orb-modal.speaking {
+  animation: wave-pulse 0.4s infinite alternate;
+  transform: scale(1.1);
+}
+
+.orb-ring-modal {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border: 2px solid rgba(74, 222, 128, 0.2);
+  border-radius: 50%;
+  animation: ripple 2s infinite ease-out;
+}
+
+.visualizer-container-modal {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 30px;
+  margin-top: 10px;
+}
+
+.bar-modal {
+  width: 4px;
+  background: #4ade80;
+  border-radius: 2px;
+  animation: grow 1s infinite ease-in-out;
+}
+
+.btn-end-modal {
+  background-color: #2a0f16;
+  border: 1px solid #4a161f;
+  color: #fb7185;
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+.btn-end-modal:hover {
+  background-color: #3f1621;
+  transform: translateY(-1px);
+}
+
+.transcription-area-modal {
+  flex-grow: 1;
+  overflow-y: auto;
+  mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+  padding-right: 10px;
+}
+
+.transcription-area-modal::-webkit-scrollbar {
+  width: 4px;
+}
+
+.transcription-area-modal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.msg-modal {
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+.msg-modal .msg-label-modal {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4ade80;
+  margin-bottom: 4px;
+}
+
+.msg-modal .msg-text-modal {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #d4d4d4;
+}
+
+.msg-modal.msg-user .msg-label-modal {
+  color: #94a3b8;
+}
+
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+@keyframes grow {
+  0%, 100% { height: 8px; }
+  50% { height: 25px; }
+}
+
 /* Audio visualizer bars */
 .audio-visualizer {
   display: flex;
@@ -3415,6 +3568,36 @@ body.light-mode .call-log-transcript-toolbar .btn {
 .vl-card-edit-btn:hover {
   color: var(--yellow);
   border-color: var(--yellow);
+}
+
+.vl-card-delete-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vl-card-delete-btn:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+.vl-card-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vl-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .vl-card-audio {

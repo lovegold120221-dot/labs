@@ -87,11 +87,67 @@ export async function fetchVoices(): Promise<Voice[]> {
 }
 
 function resolveProviderVoiceId(voiceId: string) {
+  if (!voiceId) {
+    return DEFAULT_PROVIDER_VOICE_ID;
+  }
+  // Handle VAPI voices (prefixed with vapi:)
+  if (voiceId.startsWith('vapi:')) {
+    const vapiVoiceId = voiceId.substring(5);
+    if (!vapiVoiceId || vapiVoiceId.length < 2) {
+      return DEFAULT_PROVIDER_VOICE_ID;
+    }
+    const VAPI_VOICE_MAP: Record<string, string> = {
+      'Elliot': 'EXAVITQu4vr4xnSDxMaL',
+      'Rachel': '21m00Tcm4TlvDq8ikWAM',
+      'Jamie': 'ZQe3wR2ZtFKzL1iMvLq4',
+      'Sarah': 'EXAVITQu4vr4xnSDxMaL',
+      'Adam': 'pNInz6obpgDQGcFmaJgB',
+      'Drew': 'pNInz6obpgDQGcFmaJgB',
+      'Eden': 'EXAVITQu4vr4xnSDxMaL',
+    };
+    return VAPI_VOICE_MAP[vapiVoiceId] || DEFAULT_PROVIDER_VOICE_ID;
+  }
+  // Handle plain VAPI voice names (like "Elliot", "Rachel")
+  const VAPI_VOICE_NAMES = new Set(['Elliot', 'Rachel', 'Jamie', 'Sarah', 'Adam', 'Drew', 'Eden', 'Aria', 'Christopher', 'Diana', 'Eric', 'Freya', 'George', 'Hannah', 'Ivy', 'James', 'Katherine', 'Laura', 'Michael', 'Nicole', 'Oliver', 'Penelope', 'Ryan', 'Sophia', 'Thomas', 'Victoria', 'William', 'Yuki', 'Zoe']);
+  if (VAPI_VOICE_NAMES.has(voiceId)) {
+    const VAPI_VOICE_MAP: Record<string, string> = {
+      'Elliot': 'EXAVITQu4vr4xnSDxMaL',
+      'Rachel': '21m00Tcm4TlvDq8ikWAM',
+      'Jamie': 'ZQe3wR2ZtFKzL1iMvLq4',
+      'Sarah': 'EXAVITQu4vr4xnSDxMaL',
+      'Adam': 'pNInz6obpgDQGcFmaJgB',
+      'Drew': 'pNInz6obpgDQGcFmaJgB',
+      'Eden': 'EXAVITQu4vr4xnSDxMaL',
+      'Aria': 'EXAVITQu4vr4xnSDxMaL',
+      'Christopher': 'pNInz6obpgDQGcFmaJgB',
+      'Diana': '21m00Tcm4TlvDq8ikWAM',
+      'Eric': 'pNInz6obpgDQGcFmaJgB',
+      'Freya': 'EXAVITQu4vr4xnSDxMaL',
+      'George': 'pNInz6obpgDQGcFmaJgB',
+      'Hannah': '21m00Tcm4TlvDq8ikWAM',
+      'Ivy': 'EXAVITQu4vr4xnSDxMaL',
+      'James': 'pNInz6obpgDQGcFmaJgB',
+      'Katherine': '21m00Tcm4TlvDq8ikWAM',
+      'Laura': '21m00Tcm4TlvDq8ikWAM',
+      'Michael': 'pNInz6obpgDQGcFmaJgB',
+      'Nicole': '21m00Tcm4TlvDq8ikWAM',
+      'Oliver': 'pNInz6obpgDQGcFmaJgB',
+      'Penelope': '21m00Tcm4TlvDq8ikWAM',
+      'Ryan': 'pNInz6obpgDQGcFmaJgB',
+      'Sophia': '21m00Tcm4TlvDq8ikWAM',
+      'Thomas': 'pNInz6obpgDQGcFmaJgB',
+      'Victoria': '21m00Tcm4TlvDq8ikWAM',
+      'William': 'pNInz6obpgDQGcFmaJgB',
+      'Yuki': 'EXAVITQu4vr4xnSDxMaL',
+      'Zoe': '21m00Tcm4TlvDq8ikWAM',
+    };
+    return VAPI_VOICE_MAP[voiceId] || DEFAULT_PROVIDER_VOICE_ID;
+  }
   if (MOCK_VOICE_IDS.has(voiceId) || /^variant-\d+$/i.test(voiceId)) {
     return DEFAULT_PROVIDER_VOICE_ID;
   }
   // If voiceId doesn't look like an ElevenLabs voice ID (alphanumeric, reasonable length), use default
-  if (!voiceId || voiceId.length < 10 || !/^[a-zA-Z0-9]+$/.test(voiceId)) {
+  if (voiceId.length < 10 || !/^[a-zA-Z0-9]+$/.test(voiceId)) {
     return DEFAULT_PROVIDER_VOICE_ID;
   }
   return voiceId;

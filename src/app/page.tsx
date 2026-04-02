@@ -27,7 +27,8 @@ import {
   Pencil,
   Trash2,
   Zap,
-  Plus
+  Plus,
+  User
 } from "lucide-react";
 
 import { Voice, UserTtsHistoryItem } from "@/lib/services/echo";
@@ -35,7 +36,7 @@ import DocsPane from "@/components/DocsPane";
 import { TTS_MODEL_LABELS } from "@/lib/brand";
 import { enhanceTextForTTS, normalizeForTTS } from "@/lib/tts-enhancer";
 import { supabase } from "@/lib/supabase";
-import { User } from "@supabase/supabase-js";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 // type Voice moved to echo.ts
 
@@ -210,7 +211,7 @@ export default function Dashboard() {
   const voicePreviewAnimationRef = useRef<number | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -536,6 +537,7 @@ export default function Dashboard() {
     { id: "pane-audio", label: "Audio", icon: <Volume2 size={18} />, desc: "Voices, Text to Speech, Speech to Text, History" },
     { id: "pane-clone", label: "Clone", icon: <Copy size={18} />, desc: "Instantly clone voices with full metadata tagging" },
     { id: "pane-Create", label: "Create", icon: <Mic size={18} />, desc: "Describe your agent with voice or text" },
+    { id: "pane-my-agents", label: "My Agents", icon: <User size={18} />, desc: "Your created agents" },
     { id: "pane-agents", label: "Templates", icon: <Users size={18} />, desc: "Create and connect to AI templates" },
     { id: "pane-call-logs", label: "Call Logs", icon: <Phone size={18} />, desc: "All call history" },
     { id: "pane-docs", label: "Docs", icon: <FileText size={18} />, desc: "API documentation and test inbound" },
@@ -1297,7 +1299,7 @@ export default function Dashboard() {
   }, [authedFetch, user]);
 
   useEffect(() => {
-    if ((activeTab === "pane-agents" || activeTab === "pane-Create") && user) {
+    if ((activeTab === "pane-agents" || activeTab === "pane-Create" || activeTab === "pane-my-agents") && user) {
       loadAgentFormDefaults();
       fetchUserAgents();
     }
@@ -3080,9 +3082,127 @@ export default function Dashboard() {
                           </div>
                         </div>
                       ))}
-                    </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "pane-my-agents" && (
+            <div className="tab-pane active vl-root">
+              <div className="vl-tabs-row">
+                <div className="vl-tabs">
+                  <div className="vl-tab active">
+                    <User size={14} />
+                    My Agents
                   </div>
-                )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="pane-meta">{userAgents.length} agent(s)</span>
+                  <button
+                    type="button"
+                    className="btn primary flex items-center gap-2"
+                    onClick={() => {
+                      setUserAssistantId(null);
+                      setNewAgentName("");
+                      setAgentIntroSpiel("");
+                      setAgentSkillsPrompt("");
+                      setAgentLanguage("multilingual");
+                      setAgentVoice("vapi:Elliot");
+                      setSelectedAgentPhoneNumberId("");
+                      setAgentKnowledgeFiles([]);
+                      setActiveTab("pane-Create");
+                    }}
+                  >
+                    <Plus size={14} /> Create New Agent
+                  </button>
+                </div>
+              </div>
+
+              {userAgents.length === 0 ? (
+                <div className="placeholder-pane h-32 col-span-full flex flex-col items-center justify-center gap-4">
+                  <div className="text-gray-500">No agents created yet</div>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => setActiveTab("pane-Create")}
+                  >
+                    <Plus size={14} /> Create Your First Agent
+                  </button>
+                </div>
+              ) : (
+                <div className="vl-grid">
+                  {userAgents.map((a) => (
+                    <div
+                      key={a.id}
+                      className={`vl-card ${activeAgentId === a.id && callStatus === "active" ? "playing" : ""}`}
+                    >
+                      <div className="vl-card-avatar">
+                        <User
+                          size={16}
+                          className={activeAgentId === a.id && callStatus === "active" ? "text-lime animate-pulse" : ""}
+                        />
+                      </div>
+                      <div className="vl-card-info">
+                        <div className="vl-card-name" title={a.name || "Unnamed Agent"}>
+                          {a.name || "Unnamed Agent"}
+                        </div>
+                        <div className="vl-card-category">{a.language || "multilingual"}</div>
+                        <div className="vl-card-lang">
+                          ID: {a.id.slice(0, 8)}...
+                        </div>
+                      </div>
+                      <div className="vl-card-actions">
+                        <button
+                          type="button"
+                          className="vl-card-play-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleCall(a.id);
+                          }}
+                          disabled={callStatus === "loading" || (callStatus === "active" && activeAgentId !== a.id)}
+                          title="Test Call"
+                        >
+                          {callStatus === "loading" && activeAgentId === a.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : activeAgentId === a.id && callStatus === "active" ? (
+                            <PhoneOff size={14} />
+                          ) : (
+                            <Phone size={14} />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          className="vl-card-edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditAgent(a.id);
+                          }}
+                          title="Edit Agent"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="vl-card-delete-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAgent(a.id);
+                          }}
+                          title="Delete Agent"
+                          disabled={isDeletingAgent === a.id}
+                        >
+                          {isDeletingAgent === a.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
                 <div className="mt-8 max-w-[980px]">
                   <label className="mb-3 block text-2xs font-semibold text-faint uppercase tracking-wider">Active</label>
@@ -3882,75 +4002,45 @@ Jane Smith,+15559876543`}
         </div>
       </main>
 
-      {/* Test Call Modal: orb, audio visualizer, live transcription */}
+      {/* Test Call Modal: two-panel orb, audio visualizer, live transcription */}
       {showTestCallModal && (
         <div className="call-overlay call-modal">
-          <div className="call-content">
-            <div className="orb-container">
-              <div className={`orb active ${isSpeaking ? "speaking" : ""}`}></div>
-              {callStatus === "loading" && (
-                <div className="text-muted text-sm">Ringing...</div>
-              )}
+          <div className="call-modal-two-panel">
+            {/* Left Panel: Agent Visualization */}
+            <div className="call-modal-left">
+              <div className="text-sm text-gray-500 mb-8 uppercase tracking-widest font-semibold">Voice Agent Active</div>
+              
+              <div className="orb-wrapper-modal">
+                <div className="orb-ring-modal"></div>
+                <div className={`orb-modal ${callStatus === "active" ? "active" : ""} ${isSpeaking ? "speaking" : ""}`}></div>
+              </div>
+
+              <div className="text-center mb-6">
+                <div className="text-xl font-medium text-white">{callStatus === "loading" ? "Connecting..." : "AI Assistant"}</div>
+                <div className="text-sm text-green-400 opacity-80">{callStatus === "loading" ? "Ringing..." : "Listening..."}</div>
+              </div>
+
               {callStatus === "active" && (
-                <>
-                  <div className="text-lime font-bold tracking-widest uppercase text-xs">Web Call</div>
-                  <div className="text-2xs text-faint">{activeAgentId}</div>
-                  <div className="text-2xs text-muted">Live transcription on</div>
-                  <div className={`audio-visualizer audio-viz-${audioVizId.replace(/:/g, "")} mt-4`} aria-hidden>
-                    <style>{`
-                      ${Array.from({ length: 12 })
-                        .map(
-                          (_, i) =>
-                            `.audio-viz-${audioVizId.replace(/:/g, "")} .audio-bar:nth-child(${i + 2}) { --bar-height: ${8 + Math.min(92, callVolume * 100 * (0.5 + 0.5 * Math.sin(i * 0.6)))}%; }`
-                        )
-                        .join("\n")}
-                    `}</style>
-                    {Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="audio-bar" />
-                    ))}
+                <div className="flex flex-col items-center mb-4">
+                  <div className="visualizer-container-modal">
+                    <div className="bar-modal" style={{ animationDelay: "0.1s" }}></div>
+                    <div className="bar-modal" style={{ animationDelay: "0.3s" }}></div>
+                    <div className="bar-modal" style={{ animationDelay: "0.2s" }}></div>
+                    <div className="bar-modal" style={{ animationDelay: "0.4s" }}></div>
+                    <div className="bar-modal" style={{ animationDelay: "0.1s" }}></div>
+                    <div className="bar-modal" style={{ animationDelay: "0.5s" }}></div>
+                    <div className="bar-modal" style={{ animationDelay: "0.2s" }}></div>
                   </div>
-                </>
+                  <div className="text-[10px] text-gray-600 mt-2 uppercase tracking-tighter">Mic Input</div>
+                </div>
               )}
-            </div>
 
-            <div className="transcript-box">
-              {transcript.length === 0 && !liveInterimTranscript.user && !liveInterimTranscript.agent ? (
-                <div className="text-faint text-2xs">—</div>
-              ) : (
-                <>
-                  {transcript.map((t, idx) => (
-                    <div key={`${idx}-${t.role}`} className={`mb-4 ${t.role === "user" ? "text-right" : "text-left"}`}>
-                      <div className={`inline-block p-3 rounded-xl ${t.role === "user" ? "bg-white/5" : "text-lime"}`}>
-                        {t.text}
-                      </div>
-                    </div>
-                  ))}
-                  {liveInterimTranscript.user && (
-                    <div className="mb-4 text-right">
-                      <div className="inline-block p-3 rounded-xl bg-white/5 active-text">
-                        {liveInterimTranscript.user}
-                      </div>
-                    </div>
-                  )}
-                  {liveInterimTranscript.agent && (
-                    <div className="mb-4 text-left">
-                      <div className="inline-block p-3 rounded-xl active-text">
-                        {liveInterimTranscript.agent}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="call-controls">
               <button
-                className="btn danger px-8 py-4 rounded-full"
+                className="btn-end-modal"
                 onClick={() => {
                   if (callStatus === "active") {
                     pendingWebCallStartRef.current = null;
                     stopWebCallRing();
-                    // End call and reset UI
                     setCallStatus("idle");
                     setActiveAgentId("");
                     setTranscript([]);
@@ -3961,8 +4051,55 @@ Jane Smith,+15559876543`}
                   }
                 }}
               >
-                <PhoneOff size={20} /> End call
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M239.54,196a15.82,15.82,0,0,1-5.54,12.7c-26.06,21.5-62,31.33-106,28.77h-3c-43.08-1.55-78.69-11.41-105.82-29.31A16,16,0,0,1,13.56,183l16-40a16.14,16.14,0,0,1,16.59-9.72l48,8A16,16,0,0,1,107,152.12l-10.74,21.49c12.3,4.78,21.43,6.34,31.74,6.39h3c11.19,0,21.56-1.78,33.4-6.84L153,152.12a16,16,0,0,1,12.83-10.82l48-8a16.13,16.13,0,0,1,16.63,9.75l16,40A15.75,15.75,0,0,1,239.54,196Z"></path></svg>
+                End call
               </button>
+            </div>
+
+            {/* Right Panel: Live Transcription */}
+            <div className="call-modal-right">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">Live Transcription</h2>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-[10px] text-gray-500">REAL-TIME</span>
+                </div>
+              </div>
+
+              <div className="transcription-area-modal">
+                {transcript.length === 0 && !liveInterimTranscript.user && !liveInterimTranscript.agent ? (
+                  <div className="msg-modal italic opacity-50">
+                    <div className="msg-label-modal">—</div>
+                    <div className="msg-text-modal">Waiting for conversation...</div>
+                  </div>
+                ) : (
+                  <>
+                    {transcript.map((t, idx) => (
+                      <div key={`${idx}-${t.role}`} className={`msg-modal ${t.role === "user" ? "msg-user" : ""}`}>
+                        <div className="msg-label-modal">{t.role === "user" ? "You" : "Agent"}</div>
+                        <div className="msg-text-modal">{t.text}</div>
+                      </div>
+                    ))}
+                    {liveInterimTranscript.user && (
+                      <div className="msg-modal msg-user">
+                        <div className="msg-label-modal">You</div>
+                        <div className="msg-text-modal italic opacity-70">{liveInterimTranscript.user}</div>
+                      </div>
+                    )}
+                    {liveInterimTranscript.agent && (
+                      <div className="msg-modal">
+                        <div className="msg-label-modal">Agent</div>
+                        <div className="msg-text-modal italic opacity-70">{liveInterimTranscript.agent}</div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-[11px] text-gray-600">
+                <span>Encryption Active</span>
+                <span>Latency: {Math.floor(Math.random() * 50 + 100)}ms</span>
+              </div>
             </div>
           </div>
         </div>

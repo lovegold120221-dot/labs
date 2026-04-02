@@ -161,6 +161,8 @@ export async function POST(request: Request) {
       orbitBody.fileIds = knowledgeFileIds;
     }
 
+    console.log('[admin-agents POST] Syncing with orbit, knowledgeFileIds:', knowledgeFileIds);
+
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
     const proto = request.headers.get('x-forwarded-proto') || 'https';
     const baseUrl = host ? `${proto}://${host}` : new URL(request.url).origin;

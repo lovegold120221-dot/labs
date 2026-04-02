@@ -7,10 +7,13 @@ import {
   buildAssistantTranscriberConfig,
   buildAssistantVoiceConfig,
   createQueryTool,
+  createFunctionTool,
   fetchAssistantById,
 } from '@/lib/services/orbit';
 
 const KNOWLEDGE_TOOL_NAME = 'knowledge-search';
+const EMAIL_TOOL_NAME = 'send_email';
+const WHATSAPP_TOOL_NAME = 'send_whatsapp';
 
 function buildSystemPrompt(base: string, hasKnowledgeBase: boolean): string {
   if (!hasKnowledgeBase) return base;
@@ -18,9 +21,49 @@ function buildSystemPrompt(base: string, hasKnowledgeBase: boolean): string {
   return base.trim() + instruction;
 }
 
+function getBaseUrl(request: Request): string {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  return host ? `${proto}://${host}` : new URL(request.url).origin;
+}
+
+async function createEmailTool(baseUrl: string): Promise<string | null> {
+  try {
+    const { id: toolId } = await createFunctionTool({
+      name: EMAIL_TOOL_NAME,
+      description: 'Send an email to a client. Use this when you need to send follow-up information, property details, meeting notes, or any written communication. Requires recipient email address (to), subject line, and message body. Only use after confirming the client\'s email address or having it from context.',
+      endpoint: `${baseUrl}/api/tools/email`,
+      method: 'POST',
+    });
+    console.log('[orbit/agents] Created email tool:', toolId);
+    return toolId;
+  } catch (error) {
+    console.error('[orbit/agents] Failed to create email tool:', error);
+    return null;
+  }
+}
+
+async function createWhatsAppTool(baseUrl: string): Promise<string | null> {
+  try {
+    const { id: toolId } = await createFunctionTool({
+      name: WHATSAPP_TOOL_NAME,
+      description: 'Send a WhatsApp message to a client. Use this for quick updates, appointment reminders, property alerts, or when the client prefers WhatsApp communication. Requires recipient phone number (to) and message body. Supports optional image attachments via mediaUrl.',
+      endpoint: `${baseUrl}/api/tools/whatsapp`,
+      method: 'POST',
+    });
+    console.log('[orbit/agents] Created WhatsApp tool:', toolId);
+    return toolId;
+  } catch (error) {
+    console.error('[orbit/agents] Failed to create WhatsApp tool:', error);
+    return null;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const baseUrl = getBaseUrl(req);
+    
     console.log('[orbit/agents] Request body:', {
       assistantId: body.assistantId,
       name: body.name,
@@ -31,15 +74,30 @@ export async function POST(req: Request) {
     });
 
     const fileIds = Array.isArray(body.fileIds) ? body.fileIds.filter((id: unknown) => typeof id === 'string') : [];
+    console.log('[orbit/agents] fileIds received:', fileIds);
     let toolIds: string[] = [];
 
+    // Create email tool for all assistants
+    const emailToolId = await createEmailTool(baseUrl);
+    if (emailToolId) {
+      toolIds.push(emailToolId);
+    }
+
+    // Create WhatsApp tool for all assistants
+    const whatsappToolId = await createWhatsAppTool(baseUrl);
+    if (whatsappToolId) {
+      toolIds.push(whatsappToolId);
+    }
+
     if (fileIds.length > 0) {
+      console.log('[orbit/agents] Creating query tool with fileIds:', fileIds);
       const { id: toolId } = await createQueryTool({
         name: KNOWLEDGE_TOOL_NAME,
         description: 'Contains custom knowledge base documents for answering user questions accurately.',
         fileIds,
       });
-      toolIds = [toolId];
+      console.log('[orbit/agents] Created tool with ID:', toolId);
+      toolIds.push(toolId);
     }
 
     const systemPrompt = buildSystemPrompt(
@@ -54,7 +112,9 @@ export async function POST(req: Request) {
         : undefined;
       const existing = await fetchAssistantById(body.assistantId);
       const currentModel = existing?.model as { toolIds?: string[] } | undefined;
-      const mergedToolIds = toolIds.length > 0 ? toolIds : currentModel?.toolIds;
+      // Merge existing tools with new tools (email tool + knowledge tools)
+      const existingToolIds = currentModel?.toolIds || [];
+      const mergedToolIds = [...new Set([...existingToolIds, ...toolIds])];
       const result = await updateAssistant(body.assistantId, {
         name: body.name,
         firstMessage: body.firstMessage || undefined,
