@@ -862,7 +862,7 @@ export default function AdminPage() {
               <label>Documentation URL</label>
               <input type="url" value={formKbUrl} onChange={(e) => setFormKbUrl(e.target.value)} placeholder="https://your-docs.com/data" />
             </div>
-            <label className="kb-zone" htmlFor="adminKnowledgeFiles">
+            <label className="kb-zone" htmlFor="adminKnowledgeFiles" style={{ cursor: isUploadingKnowledge ? 'not-allowed' : 'pointer', opacity: isUploadingKnowledge ? 0.6 : 1 }}>
               <div style={{ fontSize: "1.5rem", marginBottom: 10 }}>📄</div>
               <div style={{ fontWeight: 600 }}>{isUploadingKnowledge ? "Uploading..." : "Upload Knowledge Files"}</div>
               <div style={{ color: "#888", fontSize: "0.75rem", marginTop: 4 }}>PDF, TXT, CSV, DOCX, JSON, XML, YAML, LOG (Max 1GB)</div>
@@ -872,8 +872,10 @@ export default function AdminPage() {
               type="file"
               className="hidden-file-input"
               multiple
+              accept=".pdf,.txt,.csv,.docx,.doc,.md,.tsv,.yaml,.yml,.json,.xml,.log"
               onChange={handleKnowledgeUpload}
               disabled={isUploadingKnowledge}
+              style={{ display: 'none' }}
             />
 
             {knowledgeStatus && <div className={`kb-status ${knowledgeStatus.startsWith("Error") ? "error" : "ok"}`}>{knowledgeStatus}</div>}
