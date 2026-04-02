@@ -174,7 +174,7 @@ type ApiUsageSummary = {
 };
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("pane-audio");
+  const [activeTab, setActiveTab] = useState<string>("pane-audio");
   const [audioSubTab, setAudioSubTab] = useState<"voices" | "tts" | "stt" | "history">("voices");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [voices, setVoices] = useState<Voice[]>([]);
