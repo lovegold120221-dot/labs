@@ -109,9 +109,13 @@ export async function POST(request: Request) {
     }
 
     const rows = (knowledgeRows || []) as AdminAgentKnowledgeRow[];
+    console.log('[admin-agents POST] Knowledge rows found:', rows.length, 'for assistant:', assistantId);
+    
     const knowledgeFileIds = rows
       .map((row) => row.vapi_file_id)
       .filter((id) => typeof id === 'string' && !!id.trim());
+
+    console.log('[admin-agents POST] Knowledge fileIds for orbit:', knowledgeFileIds);
 
     if (rows.some((row) => row.assistant_id === null)) {
       const unassignedIds = rows.filter((row) => row.assistant_id === null).map((row) => row.id);
